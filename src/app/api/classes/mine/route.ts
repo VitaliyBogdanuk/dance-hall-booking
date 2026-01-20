@@ -1,0 +1,24 @@
+import { NextRequest } from "next/server";
+import { requireTrainer } from "@/server/auth/rbac";
+import { ClassService } from "@/server/services/classService";
+import { TrainerProfileModel } from "@/server/db/models/trainerProfile.model";
+import { connectOnce } from "@/server/db/mongoose";
+import { jsonOk, jsonError } from "@/server/http/response";
+import { NotFoundError } from "@/server/http/errors";
+
+export async function GET(request: NextRequest) {
+  try {
+    const user = await requireTrainer();
+    await connectOnce();
+
+    const trainerProfile = await TrainerProfileModel.findOne({ userId: user.userId }).lean();
+    if (!trainerProfile) {
+      throw new NotFoundError("Trainer profile not found");
+    }
+
+    const classes = await ClassService.listMyClasses(trainerProfile._id.toString());
+    return jsonOk(classes, 200);
+  } catch (error) {
+    return jsonError(error);
+  }
+}

@@ -1,4 +1,4 @@
-import { Schema, model, models } from "mongoose";
+import mongoose, { Schema, model } from "mongoose";
 
 export interface IHall {
   name: string;
@@ -15,4 +15,4 @@ const HallSchema = new Schema<IHall>(
   { timestamps: true }
 );
 
-export const HallModel = models.Hall || model<IHall>("Hall", HallSchema);
+export const HallModel = (mongoose.models && mongoose.models.Hall) || model<IHall>("Hall", HallSchema);

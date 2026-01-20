@@ -1,19 +1,45 @@
 import { z } from "zod";
 
-export const objectId = z.string().regex(/^[a-fA-F0-9]{24}$/);
+/**
+ * Validates MongoDB ObjectId format (24 hex characters)
+ */
+export const objectId = z.string().regex(/^[a-fA-F0-9]{24}$/, {
+  message: "Invalid ObjectId format",
+});
 
-export const isoDateTime = z.string().datetime();
+/**
+ * Validates ISO 8601 datetime string
+ */
+export const isoDateTime = z.string().datetime({
+  message: "Invalid ISO datetime format",
+});
 
-export const ymd = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
-export const ym = z.string().regex(/^\d{4}-\d{2}$/);
+/**
+ * Validates YYYY-MM date format
+ */
+export const ym = z.string().regex(/^\d{4}-\d{2}$/, {
+  message: "Invalid month format, expected YYYY-MM",
+});
 
+/**
+ * Validates YYYY-MM-DD date format
+ */
+export const ymd = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
+  message: "Invalid date format, expected YYYY-MM-DD",
+});
+
+/**
+ * Helper schema that ensures startAt is before endAt
+ */
 export const ensureStartBeforeEnd = z
   .object({
     startAt: isoDateTime,
     endAt: isoDateTime,
   })
   .superRefine((v, ctx) => {
-    if (new Date(v.startAt).getTime() >= new Date(v.endAt).getTime()) {
+    const start = new Date(v.startAt).getTime();
+    const end = new Date(v.endAt).getTime();
+    if (start >= end) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "startAt must be before endAt",

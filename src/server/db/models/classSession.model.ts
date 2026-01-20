@@ -1,4 +1,4 @@
-import { Schema, model, models, Types } from "mongoose";
+import mongoose, { Schema, model, Types } from "mongoose";
 
 export type ClassStatus = "SCHEDULED" | "CANCELED";
 
@@ -33,4 +33,4 @@ ClassSessionSchema.index({ hallId: 1, startAt: 1, endAt: 1 });
 ClassSessionSchema.index({ trainerId: 1, startAt: 1 });
 
 export const ClassSessionModel =
-  models.ClassSession || model<IClassSession>("ClassSession", ClassSessionSchema);
+  (mongoose.models && mongoose.models.ClassSession) || model<IClassSession>("ClassSession", ClassSessionSchema);

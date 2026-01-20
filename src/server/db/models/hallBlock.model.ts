@@ -1,4 +1,4 @@
-import { Schema, model, models, Types } from "mongoose";
+import mongoose, { Schema, model, Types } from "mongoose";
 
 export interface IHallBlock {
   hallId: Types.ObjectId;
@@ -24,4 +24,4 @@ const HallBlockSchema = new Schema<IHallBlock>(
 // For overlap checks
 HallBlockSchema.index({ hallId: 1, startAt: 1, endAt: 1 });
 
-export const HallBlockModel = models.HallBlock || model<IHallBlock>("HallBlock", HallBlockSchema);
+export const HallBlockModel = (mongoose.models && mongoose.models.HallBlock) || model<IHallBlock>("HallBlock", HallBlockSchema);

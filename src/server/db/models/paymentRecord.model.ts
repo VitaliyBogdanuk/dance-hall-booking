@@ -1,4 +1,4 @@
-import { Schema, model, models, Types } from "mongoose";
+import mongoose, { Schema, model, Types } from "mongoose";
 
 export type PaymentStatus = "PENDING" | "PAID" | "OVERDUE";
 
@@ -26,4 +26,4 @@ const PaymentRecordSchema = new Schema<IPaymentRecord>(
 PaymentRecordSchema.index({ parentId: 1, month: 1 }, { unique: true });
 
 export const PaymentRecordModel =
-  models.PaymentRecord || model<IPaymentRecord>("PaymentRecord", PaymentRecordSchema);
+  (mongoose.models && mongoose.models.PaymentRecord) || model<IPaymentRecord>("PaymentRecord", PaymentRecordSchema);

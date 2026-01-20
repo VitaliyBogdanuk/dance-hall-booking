@@ -1,4 +1,4 @@
-import { Schema, model, models, Types } from "mongoose";
+import mongoose, { Schema, model, Types } from "mongoose";
 
 export interface IChild {
   parentId: Types.ObjectId;
@@ -21,4 +21,4 @@ const ChildSchema = new Schema<IChild>(
 
 ChildSchema.index({ parentId: 1, createdAt: -1 });
 
-export const ChildModel = models.Child || model<IChild>("Child", ChildSchema);
+export const ChildModel = (mongoose.models && mongoose.models.Child) || model<IChild>("Child", ChildSchema);

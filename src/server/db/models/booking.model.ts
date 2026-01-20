@@ -1,4 +1,4 @@
-import { Schema, model, models, Types } from "mongoose";
+import mongoose, { Schema, model, Types } from "mongoose";
 
 export type BookingStatus = "BOOKED" | "CANCELED";
 
@@ -29,4 +29,4 @@ BookingSchema.index({ classSessionId: 1, childId: 1 }, { unique: true });
 
 BookingSchema.index({ parentId: 1, createdAt: -1 });
 
-export const BookingModel = models.Booking || model<IBooking>("Booking", BookingSchema);
+export const BookingModel = (mongoose.models && mongoose.models.Booking) || model<IBooking>("Booking", BookingSchema);

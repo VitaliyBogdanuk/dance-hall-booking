@@ -20,4 +20,4 @@ const TrainerProfileSchema = new Schema<ITrainerProfile>(
 );
 
 export const TrainerProfileModel =
-  models.TrainerProfile || model<ITrainerProfile>("TrainerProfile", TrainerProfileSchema);
+  (mongoose.models && mongoose.models.TrainerProfile) || model<ITrainerProfile>("TrainerProfile", TrainerProfileSchema);

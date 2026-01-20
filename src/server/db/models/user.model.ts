@@ -1,4 +1,4 @@
-import mongoose, { Schema, model, models } from "mongoose";
+import mongoose, { Schema, model } from "mongoose";
 
 export type UserRole = "ADMIN" | "TRAINER" | "PARENT";
 
@@ -23,4 +23,4 @@ const UserSchema = new Schema<IUser>(
   { timestamps: true }
 );
 
-export const UserModel = models.User || model<IUser>("User", UserSchema);
+export const UserModel = (mongoose.models && mongoose.models.User) || model<IUser>("User", UserSchema);

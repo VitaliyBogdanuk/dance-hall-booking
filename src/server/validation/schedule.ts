@@ -8,3 +8,5 @@ export const scheduleQuery = z.object({
   trainerId: objectId.optional(),
   hallId: objectId.optional(),
 });
+
+export type ScheduleQuery = z.infer<typeof scheduleQuery>;
