@@ -3,6 +3,7 @@ import mongoose, { Schema, model, Types } from "mongoose";
 export type BookingStatus = "BOOKED" | "CANCELED";
 
 export interface IBooking {
+  _id?: Types.ObjectId;
   classSessionId: Types.ObjectId;
   childId: Types.ObjectId;
   parentId: Types.ObjectId;

@@ -5,7 +5,7 @@ import { Types } from "mongoose";
 import { sanitizeObject } from "@/server/utils/sanitize";
 
 export class ChildService {
-  static async create(data: { parentId: string; name: string; birthDate?: Date; notes?: string }): Promise<IChild> {
+  static async create(data: { parentId: string; name: string; birthDate?: Date | string; notes?: string }): Promise<IChild> {
     await connectOnce();
     // Sanitize input
     const sanitized = sanitizeObject(data);
@@ -20,7 +20,7 @@ export class ChildService {
 
   static async getById(id: string, parentId?: string): Promise<IChild> {
     await connectOnce();
-    const child = await ChildModel.findById(id).lean();
+    const child = await ChildModel.findById(id).lean() as IChild | null;
     if (!child) {
       throw new NotFoundError("Child");
     }
@@ -32,14 +32,14 @@ export class ChildService {
 
   static async getByParent(parentId: string): Promise<IChild[]> {
     await connectOnce();
-    return ChildModel.find({ parentId: new Types.ObjectId(parentId) })
+    return (await ChildModel.find({ parentId: new Types.ObjectId(parentId) })
       .sort({ createdAt: -1 })
-      .lean();
+      .lean()) as unknown as IChild[];
   }
 
   static async update(
     id: string,
-    data: { name?: string; birthDate?: Date; notes?: string },
+    data: { name?: string; birthDate?: Date | string; notes?: string },
     parentId: string
   ): Promise<IChild> {
     await connectOnce();
@@ -47,7 +47,7 @@ export class ChildService {
     // Sanitize input
     const sanitized = sanitizeObject(data);
 
-    const child = await ChildModel.findById(id).lean();
+    const child = await ChildModel.findById(id).lean() as IChild | null;
     if (!child) {
       throw new NotFoundError("Child");
     }
@@ -67,7 +67,7 @@ export class ChildService {
       updateData.notes = sanitized.notes;
     }
 
-    const updated = await ChildModel.findByIdAndUpdate(id, updateData, { new: true, runValidators: true }).lean();
+    const updated = await ChildModel.findByIdAndUpdate(id, updateData, { new: true, runValidators: true }).lean() as IChild | null;
     if (!updated) {
       throw new NotFoundError("Child");
     }
@@ -77,7 +77,7 @@ export class ChildService {
   static async delete(id: string, parentId: string): Promise<void> {
     await connectOnce();
 
-    const child = await ChildModel.findById(id).lean();
+    const child = await ChildModel.findById(id).lean() as IChild | null;
     if (!child) {
       throw new NotFoundError("Child");
     }

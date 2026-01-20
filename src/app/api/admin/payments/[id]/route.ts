@@ -45,13 +45,17 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 }
 
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+  const requestId = getRequestId(request);
+  logger.logInfo("API_REQUEST", { requestId, method: "DELETE", path: `/api/admin/payments/${params.id}` });
+
   try {
     const user = await requireAdmin();
     const { id } = validateParams(params, paymentIdParams);
     await PaymentService.delete(id);
-    logger.info("Payment record deleted", { userId: user.userId, paymentId: id });
+    logger.logInfo("API_RESPONSE", { requestId, status: 200, path: `/api/admin/payments/${id}`, userId: user.userId, paymentId: id });
     return jsonOk({ success: true }, 200);
   } catch (error) {
+    logger.logError("API_ERROR", { requestId, path: `/api/admin/payments/${params.id}` }, error);
     return jsonError(error);
   }
 }

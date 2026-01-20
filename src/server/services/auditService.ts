@@ -41,7 +41,7 @@ export async function recordAudit(params: RecordAuditParams): Promise<void> {
     const sanitizedMetadata = sanitizeMetadata(params.metadata);
 
     const auditLog: IAuditLog = {
-      actorUserId: params.actor?.userId ? (new Types.ObjectId(params.actor.userId) as unknown as typeof import("mongoose").Types.ObjectId) : undefined,
+      actorUserId: params.actor?.userId ? new Types.ObjectId(params.actor.userId) : undefined,
       actorRole,
       action: params.action,
       entityType: params.entityType,

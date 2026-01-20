@@ -1,7 +1,7 @@
 import type { NextAuthConfig } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { connectOnce } from "@/server/db/mongoose";
-import { UserModel, UserRole } from "@/server/db/models/user.model";
+import { UserModel, UserRole, type IUser } from "@/server/db/models/user.model";
 import bcrypt from "bcryptjs";
 import { env } from "@/server/env";
 
@@ -19,7 +19,7 @@ export const authConfig: NextAuthConfig = {
         }
 
         await connectOnce();
-        const user = await UserModel.findOne({ email: String(credentials.email).toLowerCase() }).lean();
+        const user = await UserModel.findOne({ email: String(credentials.email).toLowerCase() }).lean() as IUser | null;
 
         if (!user || !user.passwordHash) {
           return null;
@@ -30,6 +30,9 @@ export const authConfig: NextAuthConfig = {
           return null;
         }
 
+        if (!user._id) {
+          return null;
+        }
         return {
           id: user._id.toString(),
           email: user.email,
@@ -86,6 +89,8 @@ declare module "next-auth" {
   }
 }
 
+// Module augmentation for next-auth/jwt
+// @ts-expect-error - Module augmentation for next-auth/jwt
 declare module "next-auth/jwt" {
   interface JWT {
     id: string;

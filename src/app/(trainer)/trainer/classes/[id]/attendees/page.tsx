@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   PageHeader,
@@ -49,11 +49,7 @@ export default function ClassAttendeesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    loadData();
-  }, [classId]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
@@ -88,19 +84,11 @@ export default function ClassAttendeesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [classId, showToast]);
 
-  const formatDateTime = (iso: string) => {
-    const date = new Date(iso);
-    return date.toLocaleDateString("en-US", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    });
-  };
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const formatTime = (iso: string) => {
     return new Date(iso).toLocaleTimeString("en-US", {

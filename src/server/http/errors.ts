@@ -67,3 +67,15 @@ export function notFound(resource: string = "Resource"): AppError {
 export function conflict(message: string): AppError {
   return new AppError(message, 409, "CONFLICT");
 }
+
+export class MethodNotAllowedError extends AppError {
+  constructor(message: string = "Method not allowed") {
+    super(message, 405, "METHOD_NOT_ALLOWED");
+  }
+}
+
+export class NotImplementedError extends AppError {
+  constructor(message: string = "Not implemented") {
+    super(message, 501, "NOT_IMPLEMENTED");
+  }
+}

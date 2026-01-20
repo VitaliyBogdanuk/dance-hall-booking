@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
-  PageHeader,
   Card,
   CardContent,
   Button,
@@ -22,11 +21,7 @@ import Link from "next/link";
 interface Hall {
   _id: string;
   name: string;
-}
-
-interface Trainer {
-  _id: string;
-  name: string;
+  isActive?: boolean;
 }
 
 interface ClassSession {
@@ -68,51 +63,25 @@ export default function SchedulePage() {
   const [trainerFilter, setTrainerFilter] = useState("");
   const [hallFilter, setHallFilter] = useState("");
 
-  useEffect(() => {
-    const today = new Date().toISOString().split("T")[0];
-    setDateFilter(today);
-    loadHalls();
-    if (session?.user?.role === "PARENT") {
-      loadChildren();
-    }
-
-    // Monitor online/offline status
-    const handleOnline = () => setIsOffline(false);
-    const handleOffline = () => setIsOffline(true);
-
-    setIsOffline(!navigator.onLine);
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
-
-    return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
-    };
-  }, [session]);
-
-  useEffect(() => {
-    loadSchedule();
-  }, [dateFilter, trainerFilter, hallFilter]);
-
-  const loadHalls = async () => {
+  const loadHalls = useCallback(async () => {
     try {
       const data = await apiGet<Hall[]>("/api/halls");
       setHalls(data.filter((h) => h.isActive));
-    } catch (err) {
+    } catch {
       // Silently fail - halls are optional
     }
-  };
+  }, []);
 
-  const loadChildren = async () => {
+  const loadChildren = useCallback(async () => {
     try {
       const data = await apiGet<Child[]>("/api/children");
       setChildren(data);
-    } catch (err) {
+    } catch {
       // Silently fail - children will be loaded when needed
     }
-  };
+  }, []);
 
-  const loadSchedule = async () => {
+  const loadSchedule = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
@@ -153,7 +122,33 @@ export default function SchedulePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [dateFilter, trainerFilter, hallFilter, isOffline, classes.length, showToast]);
+
+  useEffect(() => {
+    const today = new Date().toISOString().split("T")[0];
+    setDateFilter(today);
+    loadHalls();
+    if (session?.user?.role === "PARENT") {
+      loadChildren();
+    }
+
+    // Monitor online/offline status
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+
+    setIsOffline(!navigator.onLine);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, [session, loadHalls, loadChildren]);
+
+  useEffect(() => {
+    loadSchedule();
+  }, [loadSchedule]);
 
   const handleBookClick = async (classSession: ClassSession) => {
     if (!session?.user) {

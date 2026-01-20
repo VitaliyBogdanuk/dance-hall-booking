@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   PageHeader,
   Card,
@@ -46,11 +46,7 @@ export default function ChildrenPage() {
     notes: "",
   });
 
-  useEffect(() => {
-    loadChildren();
-  }, []);
-
-  const loadChildren = async () => {
+  const loadChildren = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
@@ -63,7 +59,11 @@ export default function ChildrenPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showToast]);
+
+  useEffect(() => {
+    loadChildren();
+  }, [loadChildren]);
 
   const handleCreate = async () => {
     if (!createForm.name.trim()) {

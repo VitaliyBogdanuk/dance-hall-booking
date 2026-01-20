@@ -35,8 +35,25 @@ export function CardDescription({ children, className = "" }: { children: React.
   return <p className={`text-body text-gray-600 dark:text-gray-400 mt-1 ${className}`}>{children}</p>;
 }
 
-export function CardContent({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <div className={className}>{children}</div>;
+export function CardContent({ 
+  children, 
+  className = "", 
+  padding 
+}: { 
+  children: React.ReactNode; 
+  className?: string;
+  padding?: "none" | "sm" | "md" | "lg";
+}) {
+  const paddingStyles = {
+    none: "",
+    sm: "p-4",
+    md: "p-6",
+    lg: "p-8 sm:p-12",
+  };
+  
+  const paddingClass = padding ? paddingStyles[padding] : "";
+  
+  return <div className={`${paddingClass} ${className}`}>{children}</div>;
 }
 
 export function CardFooter({ children, className = "" }: { children: React.ReactNode; className?: string }) {

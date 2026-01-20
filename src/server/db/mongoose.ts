@@ -31,7 +31,7 @@ export async function connectOnce(): Promise<typeof mongoose> {
       connectionOptions.dbName = MONGODB_DBNAME;
     }
 
-    cache.promise = mongoose.connect(MONGODB_URL, connectionOptions);
+    cache.promise = mongoose.connect(MONGODB_URL!, connectionOptions);
   }
 
   try {

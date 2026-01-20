@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   PageHeader,
   Card,
@@ -46,11 +46,7 @@ export default function TrainersPage() {
     specialties: "",
   });
 
-  useEffect(() => {
-    loadTrainers();
-  }, []);
-
-  const loadTrainers = async () => {
+  const loadTrainers = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
@@ -63,7 +59,11 @@ export default function TrainersPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showToast]);
+
+  useEffect(() => {
+    loadTrainers();
+  }, [loadTrainers]);
 
   const handleCreate = async () => {
     if (!createForm.name.trim() || !createForm.email.trim() || !createForm.password.trim()) {

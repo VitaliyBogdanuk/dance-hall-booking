@@ -24,7 +24,7 @@ export class HallService {
     const hall = new HallModel(sanitized);
     const saved = await hall.save();
 
-    if (auditContext) {
+    if (auditContext && saved._id) {
       await recordAudit({
         req: auditContext.req,
         actor: auditContext.actor,
@@ -45,7 +45,7 @@ export class HallService {
    */
   static async listHalls(): Promise<IHall[]> {
     await connectOnce();
-    return HallModel.find({ isActive: true }).sort({ name: 1 }).lean();
+    return (await HallModel.find({ isActive: true }).sort({ name: 1 }).lean()) as unknown as IHall[];
   }
 
   /**
@@ -57,7 +57,7 @@ export class HallService {
    */
   static async getHallById(id: string): Promise<IHall> {
     await connectOnce();
-    const hall = await HallModel.findById(id).lean();
+    const hall = await HallModel.findById(id).lean() as IHall | null;
     if (!hall) {
       throw new NotFoundError("Hall");
     }
@@ -77,12 +77,12 @@ export class HallService {
     await connectOnce();
     // Sanitize input
     const sanitized = sanitizeObject(data);
-    const hall = await HallModel.findByIdAndUpdate(id, sanitized, { new: true, runValidators: true }).lean();
+    const hall = await HallModel.findByIdAndUpdate(id, sanitized, { new: true, runValidators: true }).lean() as IHall | null;
     if (!hall) {
       throw new NotFoundError("Hall");
     }
 
-    if (auditContext) {
+    if (auditContext && hall._id) {
       await recordAudit({
         req: auditContext.req,
         actor: auditContext.actor,

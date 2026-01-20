@@ -1,7 +1,7 @@
 import { connectOnce } from "@/server/db/mongoose";
 import { BookingModel, IBooking, BookingStatus } from "@/server/db/models/booking.model";
-import { ClassSessionModel } from "@/server/db/models/classSession.model";
-import { ChildModel } from "@/server/db/models/child.model";
+import { ClassSessionModel, IClassSession } from "@/server/db/models/classSession.model";
+import { ChildModel, IChild } from "@/server/db/models/child.model";
 import { ClassService } from "./classService";
 import { NotFoundError, ConflictError, ForbiddenError } from "@/server/http/errors";
 import { Types } from "mongoose";
@@ -34,7 +34,7 @@ export class BookingService {
     await connectOnce();
 
     // Verify child belongs to parent
-    const child = await ChildModel.findById(data.childId).lean();
+    const child = await ChildModel.findById(data.childId).lean() as IChild | null;
     if (!child) {
       throw new NotFoundError("Child");
     }
@@ -44,7 +44,7 @@ export class BookingService {
     }
 
     // Verify class is available
-    const classSession = await ClassSessionModel.findById(data.classSessionId).lean();
+    const classSession = await ClassSessionModel.findById(data.classSessionId).lean() as IClassSession | null;
     if (!classSession) {
       throw new NotFoundError("Class session");
     }
@@ -62,7 +62,7 @@ export class BookingService {
     const existingBooking = await BookingModel.findOne({
       classSessionId: new Types.ObjectId(data.classSessionId),
       childId: new Types.ObjectId(data.childId),
-    }).lean();
+    }).lean() as IBooking | null;
 
     if (existingBooking && existingBooking.status === "BOOKED") {
       throw new ConflictError("Already booked");
@@ -76,14 +76,14 @@ export class BookingService {
 
     // Create or update booking
     try {
-      if (existingBooking) {
+      if (existingBooking && existingBooking._id) {
         // Re-activate canceled booking
       const updated = await BookingModel.findByIdAndUpdate(
         existingBooking._id,
         { status: "BOOKED" as BookingStatus, $unset: { canceledAt: 1 } },
         { new: true }
-      ).lean();
-      if (!updated) {
+      ).lean() as IBooking | null;
+      if (!updated || !updated._id) {
         throw new Error("Failed to update booking");
       }
 
@@ -152,7 +152,7 @@ export class BookingService {
   ): Promise<IBooking> {
     await connectOnce();
 
-    const booking = await BookingModel.findById(data.bookingId).lean();
+    const booking = await BookingModel.findById(data.bookingId).lean() as IBooking | null;
     if (!booking) {
       throw new NotFoundError("Booking");
     }
@@ -171,7 +171,7 @@ export class BookingService {
       data.bookingId,
       { status: "CANCELED" as BookingStatus, canceledAt: new Date() },
       { new: true }
-    ).lean();
+    ).lean() as IBooking | null;
 
     if (!updated) {
       throw new NotFoundError("Booking");
@@ -202,7 +202,7 @@ export class BookingService {
    */
   static async listMyBookings(data: { parentId: string }): Promise<IBooking[]> {
     await connectOnce();
-    return BookingModel.find({ parentId: new Types.ObjectId(data.parentId) })
+    return (await BookingModel.find({ parentId: new Types.ObjectId(data.parentId) })
       .populate({
         path: "classSessionId",
         populate: [
@@ -219,7 +219,7 @@ export class BookingService {
       })
       .populate("childId", "name")
       .sort({ createdAt: -1 })
-      .lean();
+      .lean()) as unknown as IBooking[];
   }
 
   /**
@@ -230,13 +230,13 @@ export class BookingService {
    */
   static async getBookingsByClassSession(classSessionId: string): Promise<IBooking[]> {
     await connectOnce();
-    return BookingModel.find({
+    return (await BookingModel.find({
       classSessionId: new Types.ObjectId(classSessionId),
       status: "BOOKED",
     })
       .populate("childId", "name")
       .populate("parentId", "name email")
       .sort({ createdAt: 1 })
-      .lean();
+      .lean()) as unknown as IBooking[];
   }
 }

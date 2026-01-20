@@ -1,6 +1,6 @@
 import { connectOnce } from "@/server/db/mongoose";
 import { HallBlockModel, IHallBlock } from "@/server/db/models/hallBlock.model";
-import { ClassSessionModel } from "@/server/db/models/classSession.model";
+import { ClassSessionModel, IClassSession } from "@/server/db/models/classSession.model";
 import { NotFoundError, ConflictError } from "@/server/http/errors";
 import { buildOverlapQuery } from "@/server/utils/timeOverlap";
 import { CreateHallBlockBody } from "@/server/validation/blocks";
@@ -37,21 +37,21 @@ export class BlockService {
 
     // Check for overlapping blocks in the same hall
     const overlapQuery = buildOverlapQuery(startAt, endAt);
-    const existingBlocks = await HallBlockModel.find({
+    const existingBlocks = (await HallBlockModel.find({
       hallId: hallIdObj,
       ...overlapQuery,
-    }).lean();
+    }).lean()) as unknown as IHallBlock[];
 
     if (existingBlocks.length > 0) {
       throw new ConflictError("Time slot overlaps with existing block in the same hall");
     }
 
     // Check for overlapping scheduled classes in the same hall
-    const existingClasses = await ClassSessionModel.find({
+    const existingClasses = (await ClassSessionModel.find({
       hallId: hallIdObj,
       status: "SCHEDULED",
       ...overlapQuery,
-    }).lean();
+    }).lean()) as unknown as IClassSession[];
 
     if (existingClasses.length > 0) {
       throw new ConflictError("Time slot overlaps with scheduled class in the same hall");
@@ -89,9 +89,9 @@ export class BlockService {
    */
   static async listBlocksForHall(hallId: string): Promise<IHallBlock[]> {
     await connectOnce();
-    return HallBlockModel.find({ hallId: new Types.ObjectId(hallId) })
+    return (await HallBlockModel.find({ hallId: new Types.ObjectId(hallId) })
       .sort({ startAt: 1 })
-      .lean();
+      .lean()) as unknown as IHallBlock[];
   }
 
   /**
@@ -103,7 +103,7 @@ export class BlockService {
    */
   static async deleteBlock(id: string, auditContext?: { req: NextRequest; actor?: { userId?: string; role?: string } }): Promise<void> {
     await connectOnce();
-    const block = await HallBlockModel.findById(id).lean();
+    const block = await HallBlockModel.findById(id).lean() as IHallBlock | null;
     if (!block) {
       throw new NotFoundError("Hall block");
     }

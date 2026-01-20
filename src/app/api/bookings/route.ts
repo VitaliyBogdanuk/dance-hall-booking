@@ -4,6 +4,7 @@ import { validateBody } from "@/server/http/validateRequest";
 import { createBookingBody } from "@/server/validation/bookings";
 import { BookingService } from "@/server/services/bookingService";
 import { jsonOk, jsonError } from "@/server/http/response";
+import { MethodNotAllowedError } from "@/server/http/errors";
 import { getRequestId } from "@/server/http/requestContext";
 import { logger } from "@/server/utils/logger";
 import { rateLimit, getRateLimitKey } from "@/server/http/rateLimit";
@@ -46,13 +47,13 @@ export async function POST(request: NextRequest) {
 
 // Only POST is allowed
 export async function GET() {
-  return jsonError(new Error("Method not allowed"), 405);
+  return jsonError(new MethodNotAllowedError());
 }
 
 export async function PATCH() {
-  return jsonError(new Error("Method not allowed"), 405);
+  return jsonError(new MethodNotAllowedError());
 }
 
 export async function DELETE() {
-  return jsonError(new Error("Method not allowed"), 405);
+  return jsonError(new MethodNotAllowedError());
 }

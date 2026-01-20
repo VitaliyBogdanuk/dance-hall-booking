@@ -3,6 +3,7 @@ import { validateQuery } from "@/server/http/validateRequest";
 import { scheduleQuery } from "@/server/validation/schedule";
 import { ClassService } from "@/server/services/classService";
 import { jsonOk, jsonError } from "@/server/http/response";
+import { MethodNotAllowedError } from "@/server/http/errors";
 import { rateLimit, getRateLimitKey } from "@/server/http/rateLimit";
 import { getClientInfo } from "@/server/http/requestContext";
 
@@ -26,13 +27,13 @@ export async function GET(request: NextRequest) {
 
 // Only GET is allowed
 export async function POST() {
-  return jsonError(new Error("Method not allowed"), 405);
+  return jsonError(new MethodNotAllowedError());
 }
 
 export async function PATCH() {
-  return jsonError(new Error("Method not allowed"), 405);
+  return jsonError(new MethodNotAllowedError());
 }
 
 export async function DELETE() {
-  return jsonError(new Error("Method not allowed"), 405);
+  return jsonError(new MethodNotAllowedError());
 }

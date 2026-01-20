@@ -1,6 +1,7 @@
-import mongoose, { Schema, model } from "mongoose";
+import mongoose, { Schema, model, Types } from "mongoose";
 
 export interface IHall {
+  _id?: Types.ObjectId;
   name: string;
   isActive: boolean;
   createdAt: Date;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   PageHeader,
@@ -38,11 +38,7 @@ export default function HallsPage() {
   const [createForm, setCreateForm] = useState({ name: "" });
   const [editForm, setEditForm] = useState({ name: "", isActive: true });
 
-  useEffect(() => {
-    loadHalls();
-  }, []);
-
-  const loadHalls = async () => {
+  const loadHalls = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
@@ -55,7 +51,11 @@ export default function HallsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showToast]);
+
+  useEffect(() => {
+    loadHalls();
+  }, [loadHalls]);
 
   const handleCreate = async () => {
     if (!createForm.name.trim()) {

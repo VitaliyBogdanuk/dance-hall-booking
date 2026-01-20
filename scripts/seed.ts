@@ -1,18 +1,18 @@
 // Load environment variables FIRST using require (runs before imports)
-const { config } = require("dotenv");
-const { resolve } = require("path");
-const { existsSync } = require("fs");
+const dotenv = require("dotenv");
+const path = require("path");
+const fs = require("fs");
 
 // Try .env.local first (Next.js convention), then .env
-const envLocalPath = resolve(process.cwd(), ".env.local");
-const envPath = resolve(process.cwd(), ".env");
+const envLocalPath = path.resolve(process.cwd(), ".env.local");
+const envPath = path.resolve(process.cwd(), ".env");
 
 // Load .env.local if it exists, otherwise load .env
-if (existsSync(envLocalPath)) {
-  config({ path: envLocalPath });
+if (fs.existsSync(envLocalPath)) {
+  dotenv.config({ path: envLocalPath });
   console.log("📄 Loaded .env.local");
-} else if (existsSync(envPath)) {
-  config({ path: envPath });
+} else if (fs.existsSync(envPath)) {
+  dotenv.config({ path: envPath });
   console.log("📄 Loaded .env");
 } else {
   console.warn("⚠️  No .env.local or .env file found. Make sure environment variables are set.");
@@ -164,3 +164,6 @@ async function seed() {
 }
 
 seed();
+
+// Make this file a module to avoid TypeScript global scope conflicts
+export {};

@@ -4,7 +4,7 @@ import { jsonOk, jsonError } from "@/server/http/response";
 import { UserModel } from "@/server/db/models/user.model";
 import { connectOnce } from "@/server/db/mongoose";
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     await requireAdmin();
     await connectOnce();

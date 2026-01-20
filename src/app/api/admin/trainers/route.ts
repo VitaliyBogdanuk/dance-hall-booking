@@ -3,7 +3,7 @@ import { requireAdmin } from "@/server/auth/rbac";
 import { validateBody } from "@/server/http/validateRequest";
 import { z } from "zod";
 import { objectId } from "@/server/validation/common";
-import { UserModel } from "@/server/db/models/user.model";
+import { UserModel, type IUser } from "@/server/db/models/user.model";
 import { TrainerProfileModel } from "@/server/db/models/trainerProfile.model";
 import { connectOnce } from "@/server/db/mongoose";
 import { jsonOk, jsonError } from "@/server/http/response";
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     let userId: string;
 
     if (body.userId) {
-      const user = await UserModel.findById(body.userId).lean();
+      const user = await UserModel.findById(body.userId).lean() as IUser | null;
       if (!user) {
         throw new NotFoundError("User not found");
       }
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
       }
       userId = body.userId;
     } else if (body.email) {
-      const existingUser = await UserModel.findOne({ email: body.email.toLowerCase() }).lean();
+      const existingUser = await UserModel.findOne({ email: body.email.toLowerCase() }).lean() as IUser | null;
       if (existingUser) {
         throw new ConflictError("User with this email already exists");
       }
@@ -76,14 +76,14 @@ export async function POST(request: NextRequest) {
     });
     const saved = await trainerProfile.save();
 
-    logger.info("Trainer created", { adminId: admin.userId, trainerId: saved._id.toString() });
+    logger.logInfo("Trainer created", { adminId: admin.userId, trainerId: saved._id.toString() });
     return jsonOk(saved, 201);
   } catch (error) {
     return jsonError(error);
   }
 }
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     await requireAdmin();
     await connectOnce();

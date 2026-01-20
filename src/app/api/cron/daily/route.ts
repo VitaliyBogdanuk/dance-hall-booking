@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { jsonOk, jsonError } from "@/server/http/response";
+import { MethodNotAllowedError } from "@/server/http/errors";
 import { logger } from "@/server/utils/logger";
 import { getRequestId } from "@/server/http/requestContext";
 import { UnauthorizedError } from "@/server/http/errors";
@@ -63,13 +64,13 @@ export async function GET(request: NextRequest) {
 
 // Only GET is allowed
 export async function POST() {
-  return jsonError(new Error("Method not allowed"), 405);
+  return jsonError(new MethodNotAllowedError());
 }
 
 export async function PATCH() {
-  return jsonError(new Error("Method not allowed"), 405);
+  return jsonError(new MethodNotAllowedError());
 }
 
 export async function DELETE() {
-  return jsonError(new Error("Method not allowed"), 405);
+  return jsonError(new MethodNotAllowedError());
 }

@@ -1,12 +1,10 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   PageHeader,
   Card,
   CardContent,
-  Button,
   EmptyState,
   Spinner,
   useToast,
@@ -53,7 +51,6 @@ interface Trainer {
 }
 
 export default function AdminClassesPage() {
-  const router = useRouter();
   const { toasts, showToast, removeToast } = useToast();
   const [classes, setClasses] = useState<ClassSession[]>([]);
   const [halls, setHalls] = useState<Hall[]>([]);
@@ -66,15 +63,7 @@ export default function AdminClassesPage() {
     trainerId: "",
   });
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  useEffect(() => {
-    loadClasses();
-  }, [filters]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
@@ -94,9 +83,9 @@ export default function AdminClassesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showToast]);
 
-  const loadClasses = async () => {
+  const loadClasses = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
@@ -122,19 +111,15 @@ export default function AdminClassesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters, showToast]);
 
-  const formatDateTime = (iso: string) => {
-    const date = new Date(iso);
-    return date.toLocaleDateString("en-US", {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    });
-  };
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  useEffect(() => {
+    loadClasses();
+  }, [loadClasses]);
 
   const formatTime = (iso: string) => {
     return new Date(iso).toLocaleTimeString("en-US", {
@@ -203,37 +188,32 @@ export default function AdminClassesPage() {
               label="Status"
               value={filters.status}
               onChange={(e) => setFilters({ ...filters, status: e.target.value as typeof filters.status })}
-            >
-              <option value="">All Statuses</option>
-              <option value="SCHEDULED">Scheduled</option>
-              <option value="CANCELED">Canceled</option>
-            </Select>
+              options={[
+                { value: "", label: "All Statuses" },
+                { value: "SCHEDULED", label: "Scheduled" },
+                { value: "CANCELED", label: "Canceled" },
+              ]}
+            />
 
             <Select
               label="Hall"
               value={filters.hallId}
               onChange={(e) => setFilters({ ...filters, hallId: e.target.value })}
-            >
-              <option value="">All Halls</option>
-              {halls.map((hall) => (
-                <option key={hall._id} value={hall._id}>
-                  {hall.name}
-                </option>
-              ))}
-            </Select>
+              options={[
+                { value: "", label: "All Halls" },
+                ...halls.map((hall) => ({ value: hall._id, label: hall.name })),
+              ]}
+            />
 
             <Select
               label="Trainer"
               value={filters.trainerId}
               onChange={(e) => setFilters({ ...filters, trainerId: e.target.value })}
-            >
-              <option value="">All Trainers</option>
-              {trainers.map((trainer) => (
-                <option key={trainer._id} value={trainer._id}>
-                  {trainer.userId.name}
-                </option>
-              ))}
-            </Select>
+              options={[
+                { value: "", label: "All Trainers" },
+                ...trainers.map((trainer) => ({ value: trainer._id, label: trainer.userId.name })),
+              ]}
+            />
           </div>
         </CardContent>
       </Card>

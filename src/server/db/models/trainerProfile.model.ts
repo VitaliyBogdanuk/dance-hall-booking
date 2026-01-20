@@ -1,6 +1,7 @@
-import mongoose, { Schema, model, models, Types } from "mongoose";
+import mongoose, { Schema, model, Types } from "mongoose";
 
 export interface ITrainerProfile {
+  _id?: Types.ObjectId;
   userId: Types.ObjectId;
   bio?: string;
   specialties?: string;

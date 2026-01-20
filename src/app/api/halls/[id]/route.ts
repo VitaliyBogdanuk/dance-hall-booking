@@ -4,6 +4,7 @@ import { validateParams, validateBody } from "@/server/http/validateRequest";
 import { hallIdParams, updateHallBody } from "@/server/validation/halls";
 import { HallService } from "@/server/services/hallService";
 import { jsonOk, jsonError } from "@/server/http/response";
+import { NotImplementedError } from "@/server/http/errors";
 import { getRequestId } from "@/server/http/requestContext";
 import { logger } from "@/server/utils/logger";
 
@@ -43,12 +44,12 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(_request: NextRequest, { params }: { params: { id: string } }) {
   try {
     await requireAdmin(); // ADMIN only for writes
-    const { id } = validateParams(params, hallIdParams);
+    validateParams(params, hallIdParams);
     // Note: Delete not implemented in HallService for MVP
-    return jsonError(new Error("Delete not implemented"), 501);
+    return jsonError(new NotImplementedError("Delete not implemented"));
   } catch (error) {
     return jsonError(error);
   }

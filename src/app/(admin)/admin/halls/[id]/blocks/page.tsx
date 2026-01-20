@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   PageHeader,
@@ -14,7 +14,7 @@ import {
   useToast,
   ToastContainer,
 } from "@/components/ui";
-import { apiGet, apiPost, apiDelete, datetimeLocalToISO, isoToDatetimeLocal, FetchError } from "@/lib/fetcher";
+import { apiGet, apiPost, apiDelete, datetimeLocalToISO, FetchError } from "@/lib/fetcher";
 
 interface Hall {
   _id: string;
@@ -51,11 +51,7 @@ export default function HallBlocksPage() {
     reason: "",
   });
 
-  useEffect(() => {
-    loadData();
-  }, [hallId]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
@@ -74,7 +70,11 @@ export default function HallBlocksPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [hallId, showToast]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const handleCreate = async () => {
     if (!createForm.startAt || !createForm.endAt || !createForm.reason.trim()) {

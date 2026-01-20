@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import { SessionProvider } from "@/components/providers/SessionProvider";
-import { ToastContainer } from "@/components/ui";
 import "./globals.css";
 import Script from "next/script";
 

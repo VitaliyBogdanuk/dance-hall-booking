@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   PageHeader,
   Card,
@@ -42,11 +42,7 @@ export default function BookingsPage() {
   const [error, setError] = useState("");
   const [cancelingBookingId, setCancelingBookingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadBookings();
-  }, []);
-
-  const loadBookings = async () => {
+  const loadBookings = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
@@ -59,7 +55,11 @@ export default function BookingsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showToast]);
+
+  useEffect(() => {
+    loadBookings();
+  }, [loadBookings]);
 
   const handleCancel = async (booking: Booking) => {
     if (!confirm("Are you sure you want to cancel this booking?")) {

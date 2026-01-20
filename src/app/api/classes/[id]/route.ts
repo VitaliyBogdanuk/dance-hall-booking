@@ -4,7 +4,8 @@ import { validateParams, validateBody } from "@/server/http/validateRequest";
 import { classIdParams } from "@/server/validation/classes";
 import { updateClassBody } from "@/server/validation/classes";
 import { ClassService } from "@/server/services/classService";
-import { TrainerProfileModel } from "@/server/db/models/trainerProfile.model";
+import { TrainerProfileModel, type ITrainerProfile } from "@/server/db/models/trainerProfile.model";
+import type { IClassSession } from "@/server/db/models/classSession.model";
 import { connectOnce } from "@/server/db/mongoose";
 import { jsonOk, jsonError } from "@/server/http/response";
 import { NotFoundError, ForbiddenError } from "@/server/http/errors";
@@ -34,8 +35,8 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     const user = await requireTrainer();
     await connectOnce();
 
-    const trainerProfile = await TrainerProfileModel.findOne({ userId: user.userId }).lean();
-    if (!trainerProfile) {
+    const trainerProfile = await TrainerProfileModel.findOne({ userId: user.userId }).lean() as ITrainerProfile | null;
+    if (!trainerProfile || !trainerProfile._id) {
       throw new NotFoundError("Trainer profile not found");
     }
 
@@ -44,7 +45,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     // Verify trainer owns this class
     // Get class without populate to get raw trainerId for comparison
     const { ClassSessionModel } = await import("@/server/db/models/classSession.model");
-    const existing = await ClassSessionModel.findById(id).lean();
+    const existing = await ClassSessionModel.findById(id).lean() as IClassSession | null;
     if (!existing) {
       throw new NotFoundError("Class session not found");
     }

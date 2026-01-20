@@ -33,7 +33,7 @@ export function sanitizeObject<T extends Record<string, unknown>>(obj: T): T {
     }) as unknown as T;
   }
 
-  const sanitized = { ...obj };
+  const sanitized = { ...obj } as Record<string, unknown>;
 
   for (const [key, value] of Object.entries(sanitized)) {
     if (typeof value === "string") {
@@ -43,5 +43,5 @@ export function sanitizeObject<T extends Record<string, unknown>>(obj: T): T {
     }
   }
 
-  return sanitized;
+  return sanitized as T;
 }

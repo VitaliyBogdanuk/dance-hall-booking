@@ -1,8 +1,9 @@
-import mongoose, { Schema, model } from "mongoose";
+import mongoose, { Schema, model, Types } from "mongoose";
 
 export type UserRole = "ADMIN" | "TRAINER" | "PARENT";
 
 export interface IUser {
+  _id?: Types.ObjectId;
   email: string;
   passwordHash?: string; // MVP credentials
   name: string;

@@ -1,6 +1,7 @@
 import mongoose, { Schema, model, Types } from "mongoose";
 
 export interface IHallBlock {
+  _id?: Types.ObjectId;
   hallId: Types.ObjectId;
   startAt: Date;
   endAt: Date;

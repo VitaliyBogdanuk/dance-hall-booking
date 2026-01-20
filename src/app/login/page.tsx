@@ -57,7 +57,7 @@ function LoginForm() {
         router.push(redirectUrl || "/schedule");
         router.refresh();
       }
-    } catch (error) {
+    } catch {
       setError("An error occurred. Please try again.");
       showToast("An error occurred. Please try again.", "error");
       setIsLoading(false);

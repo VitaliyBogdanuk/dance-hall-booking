@@ -1,6 +1,7 @@
 import mongoose, { Schema, model, Types } from "mongoose";
 
 export interface IChild {
+  _id?: Types.ObjectId;
   parentId: Types.ObjectId;
   name: string;
   birthDate?: Date;

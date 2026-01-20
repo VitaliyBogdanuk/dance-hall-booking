@@ -4,7 +4,7 @@ import { validateBody } from "@/server/http/validateRequest";
 import { createClassBody } from "@/server/validation/classes";
 import { ClassService } from "@/server/services/classService";
 import { jsonOk, jsonError } from "@/server/http/response";
-import { TrainerProfileModel } from "@/server/db/models/trainerProfile.model";
+import { TrainerProfileModel, type ITrainerProfile } from "@/server/db/models/trainerProfile.model";
 import { connectOnce } from "@/server/db/mongoose";
 import { NotFoundError } from "@/server/http/errors";
 import { getRequestId } from "@/server/http/requestContext";
@@ -18,8 +18,8 @@ export async function POST(request: NextRequest) {
     const user = await requireTrainer(); // TRAINER only
     await connectOnce();
 
-    const trainerProfile = await TrainerProfileModel.findOne({ userId: user.userId }).lean();
-    if (!trainerProfile) {
+    const trainerProfile = await TrainerProfileModel.findOne({ userId: user.userId }).lean() as ITrainerProfile | null;
+    if (!trainerProfile || !trainerProfile._id) {
       throw new NotFoundError("Trainer profile not found");
     }
 

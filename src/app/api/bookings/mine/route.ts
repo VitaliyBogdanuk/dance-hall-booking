@@ -3,7 +3,7 @@ import { requireParent } from "@/server/auth/rbac";
 import { BookingService } from "@/server/services/bookingService";
 import { jsonOk, jsonError } from "@/server/http/response";
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const user = await requireParent(); // PARENT only
     const bookings = await BookingService.listMyBookings({ parentId: user.userId });

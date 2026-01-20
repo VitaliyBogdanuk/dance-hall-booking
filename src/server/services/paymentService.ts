@@ -1,6 +1,6 @@
 import { connectOnce } from "@/server/db/mongoose";
 import { PaymentRecordModel, IPaymentRecord, PaymentStatus } from "@/server/db/models/paymentRecord.model";
-import { NotFoundError, ForbiddenError, ConflictError } from "@/server/http/errors";
+import { NotFoundError, ConflictError } from "@/server/http/errors";
 import { Types } from "mongoose";
 import { recordAudit } from "./auditService";
 import { NextRequest } from "next/server";
@@ -25,7 +25,7 @@ export class PaymentService {
     const existing = await PaymentRecordModel.findOne({
       parentId: new Types.ObjectId(sanitized.parentId),
       month: sanitized.month,
-    }).lean();
+    }).lean() as IPaymentRecord | null;
 
     if (existing) {
       throw new ConflictError(`Payment record for ${sanitized.month} already exists`);
@@ -59,7 +59,7 @@ export class PaymentService {
     await connectOnce();
     const payment = await PaymentRecordModel.findById(id)
       .populate("parentId", "name email")
-      .lean();
+      .lean() as IPaymentRecord | null;
     if (!payment) {
       throw new NotFoundError("Payment record");
     }
@@ -68,9 +68,9 @@ export class PaymentService {
 
   static async getByParent(parentId: string): Promise<IPaymentRecord[]> {
     await connectOnce();
-    return PaymentRecordModel.find({ parentId: new Types.ObjectId(parentId) })
+    return (await PaymentRecordModel.find({ parentId: new Types.ObjectId(parentId) })
       .sort({ month: -1 })
-      .lean();
+      .lean()) as unknown as IPaymentRecord[];
   }
 
   static async getAll(filters: { parentId?: string; status?: PaymentStatus; month?: string }): Promise<
@@ -89,10 +89,10 @@ export class PaymentService {
       query.month = filters.month;
     }
 
-    return PaymentRecordModel.find(query)
+    return (await PaymentRecordModel.find(query)
       .populate("parentId", "name email")
       .sort({ month: -1 })
-      .lean();
+      .lean()) as unknown as IPaymentRecord[];
   }
 
   static async update(
@@ -121,7 +121,7 @@ export class PaymentService {
       runValidators: true,
     })
       .populate("parentId", "name email")
-      .lean();
+      .lean() as IPaymentRecord | null;
 
     if (!updated) {
       throw new NotFoundError("Payment record");

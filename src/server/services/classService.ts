@@ -1,7 +1,7 @@
 import { connectOnce } from "@/server/db/mongoose";
 import { ClassSessionModel, IClassSession } from "@/server/db/models/classSession.model";
-import { HallBlockModel } from "@/server/db/models/hallBlock.model";
-import { TrainerProfileModel } from "@/server/db/models/trainerProfile.model";
+import { HallBlockModel, IHallBlock } from "@/server/db/models/hallBlock.model";
+import { TrainerProfileModel, ITrainerProfile } from "@/server/db/models/trainerProfile.model";
 import { NotFoundError, ConflictError } from "@/server/http/errors";
 import { buildOverlapQuery } from "@/server/utils/timeOverlap";
 import { CreateClassBody, UpdateClassBody } from "@/server/validation/classes";
@@ -42,7 +42,7 @@ export class ClassService {
     const hallId = new Types.ObjectId(sanitized.hallId);
     const trainerIdObj = new Types.ObjectId(trainerId);
 
-    const trainer = await TrainerProfileModel.findById(trainerIdObj).lean();
+    const trainer = await TrainerProfileModel.findById(trainerIdObj).lean() as ITrainerProfile | null;
     if (!trainer || !trainer.isActive) {
       throw new NotFoundError("Trainer profile not found or inactive");
     }
@@ -52,7 +52,7 @@ export class ClassService {
     const existingBlock = await HallBlockModel.findOne({
       hallId,
       ...overlapQuery,
-    }).lean();
+    }).lean() as IHallBlock | null;
 
     if (existingBlock) {
       throw new ConflictError("Time slot overlaps with hall block");
@@ -63,7 +63,7 @@ export class ClassService {
       hallId,
       status: "SCHEDULED",
       ...overlapQuery,
-    }).lean();
+    }).lean() as IClassSession | null;
 
     if (existingClass) {
       throw new ConflictError("Time slot overlaps with existing class in the same hall");
@@ -113,7 +113,7 @@ export class ClassService {
     // Sanitize input
     const sanitized = sanitizeObject(data);
 
-    const existing = await ClassSessionModel.findById(id).lean();
+    const existing = await ClassSessionModel.findById(id).lean() as IClassSession | null;
     if (!existing) {
       throw new NotFoundError("Class session");
     }
@@ -154,7 +154,7 @@ export class ClassService {
       const existingBlock = await HallBlockModel.findOne({
         hallId,
         ...overlapQuery,
-      }).lean();
+      }).lean() as IHallBlock | null;
 
       if (existingBlock) {
         throw new ConflictError("Time slot overlaps with hall block");
@@ -166,7 +166,7 @@ export class ClassService {
         _id: { $ne: new Types.ObjectId(id) },
         status: "SCHEDULED",
         ...overlapQuery,
-      }).lean();
+      }).lean() as IClassSession | null;
 
       if (overlappingClass) {
         throw new ConflictError("Time slot overlaps with existing class in the same hall");
@@ -179,7 +179,7 @@ export class ClassService {
     })
       .populate("trainerId", "userId bio specialties")
       .populate("hallId", "name")
-      .lean();
+      .lean() as IClassSession | null;
 
     if (!updated) {
       throw new NotFoundError("Class session");
@@ -216,7 +216,7 @@ export class ClassService {
     const classSession = await ClassSessionModel.findById(id)
       .populate("hallId", "name")
       .populate("trainerId", "userId bio specialties")
-      .lean();
+      .lean() as IClassSession | null;
     if (!classSession) {
       throw new NotFoundError("Class session");
     }
@@ -231,10 +231,10 @@ export class ClassService {
    */
   static async listMyClasses(trainerId: string): Promise<IClassSession[]> {
     await connectOnce();
-    return ClassSessionModel.find({ trainerId: new Types.ObjectId(trainerId) })
+    return (await ClassSessionModel.find({ trainerId: new Types.ObjectId(trainerId) })
       .populate("hallId", "name")
       .sort({ startAt: 1 })
-      .lean();
+      .lean()) as unknown as IClassSession[];
   }
 
   /**
@@ -270,7 +270,7 @@ export class ClassService {
       query.hallId = new Types.ObjectId(filters.hallId);
     }
 
-    const classes = await ClassSessionModel.find(query)
+    const classes = (await ClassSessionModel.find(query)
       .populate({
         path: "trainerId",
         select: "userId bio specialties",
@@ -281,7 +281,7 @@ export class ClassService {
       })
       .populate("hallId", "name")
       .sort({ startAt: 1 })
-      .lean();
+      .lean()) as unknown as IClassSession[];
 
     // Transform to include trainer name directly
     return classes.map((cls) => {
@@ -329,7 +329,7 @@ export class ClassService {
       query.status = filters.status;
     }
 
-    const classes = await ClassSessionModel.find(query)
+    const classes = (await ClassSessionModel.find(query)
       .populate({
         path: "trainerId",
         select: "userId bio specialties",
@@ -340,7 +340,7 @@ export class ClassService {
       })
       .populate("hallId", "name")
       .sort({ startAt: -1 }) // Most recent first for admin view
-      .lean();
+      .lean()) as unknown as IClassSession[];
 
     // Transform to include trainer name directly
     return classes.map((cls) => {

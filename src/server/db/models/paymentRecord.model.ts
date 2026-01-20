@@ -3,6 +3,7 @@ import mongoose, { Schema, model, Types } from "mongoose";
 export type PaymentStatus = "PENDING" | "PAID" | "OVERDUE";
 
 export interface IPaymentRecord {
+  _id?: Types.ObjectId;
   parentId: Types.ObjectId;
   month: string; // YYYY-MM
   amount: number;

@@ -16,12 +16,14 @@ export function InstallPrompt() {
 
   useEffect(() => {
     // Check if already installed
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if (window.matchMedia("(display-mode: standalone)").matches || (window.navigator as any).standalone) {
       setIsInstalled(true);
       return;
     }
 
     // Detect iOS
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
     setIsIOS(iOS);
 
@@ -91,7 +93,7 @@ export function InstallPrompt() {
       {showIOSHint && (
         <div className="absolute right-0 top-full mt-2 w-64 p-3 bg-gray-900 dark:bg-gray-800 text-white text-xs rounded-lg shadow-lg z-50">
           <p className="font-medium mb-1">Install on iOS:</p>
-          <p>Tap the Share button → "Add to Home Screen"</p>
+          <p>Tap the Share button → &quot;Add to Home Screen&quot;</p>
           <div className="absolute -top-1 right-4 w-2 h-2 bg-gray-900 dark:bg-gray-800 rotate-45"></div>
         </div>
       )}

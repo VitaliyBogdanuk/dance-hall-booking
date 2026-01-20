@@ -3,6 +3,7 @@ import mongoose, { Schema, model, Types } from "mongoose";
 export type ClassStatus = "SCHEDULED" | "CANCELED";
 
 export interface IClassSession {
+  _id?: Types.ObjectId;
   trainerId: Types.ObjectId; // TrainerProfile _id
   hallId: Types.ObjectId;
   startAt: Date;
