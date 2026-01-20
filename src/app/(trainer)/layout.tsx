@@ -1,13 +1,8 @@
 "use client";
 
 import { useSession } from "next-auth/react";
+import { useMemo } from "react";
 import { AppShell, type DrawerItem } from "@/components/layout";
-
-const navItems: DrawerItem[] = [
-  { label: "Dashboard", href: "/trainer", icon: <DashboardIcon /> },
-  { label: "Schedule", href: "/trainer/schedule", icon: <ScheduleIcon /> },
-  { label: "Profile", href: "/trainer/profile", icon: <ProfileIcon /> },
-];
 
 export default function TrainerLayout({
   children,
@@ -15,6 +10,15 @@ export default function TrainerLayout({
   children: React.ReactNode;
 }>) {
   const { data: session } = useSession();
+
+  const navItems: DrawerItem[] = useMemo(
+    () => [
+      { label: "Dashboard", href: "/trainer", icon: <DashboardIcon /> },
+      { label: "Schedule", href: "/trainer/schedule", icon: <ScheduleIcon /> },
+      { label: "Profile", href: "/trainer/profile", icon: <ProfileIcon /> },
+    ],
+    []
+  );
 
   return (
     <AppShell

@@ -1,18 +1,8 @@
 "use client";
 
 import { useSession } from "next-auth/react";
+import { useMemo } from "react";
 import { AppShell, type DrawerItem } from "@/components/layout";
-
-const navItems: DrawerItem[] = [
-  { label: "Dashboard", href: "/admin", icon: <DashboardIcon /> },
-  { label: "Halls", href: "/admin/halls", icon: <HallsIcon /> },
-  { label: "Classes", href: "/admin/classes", icon: <ClassesIcon /> },
-  { label: "Trainers", href: "/admin/trainers", icon: <TrainersIcon /> },
-  { label: "Payments", href: "/admin/payments", icon: <PaymentsIcon /> },
-  { label: "Refunds", href: "/admin/refunds", icon: <RefundsIcon /> },
-  { label: "Notifications", href: "/admin/notifications", icon: <NotificationsIcon /> },
-  { label: "Profile", href: "/admin/profile", icon: <ProfileIcon /> },
-];
 
 export default function AdminLayout({
   children,
@@ -20,6 +10,20 @@ export default function AdminLayout({
   children: React.ReactNode;
 }>) {
   const { data: session } = useSession();
+
+  const navItems: DrawerItem[] = useMemo(
+    () => [
+      { label: "Dashboard", href: "/admin", icon: <DashboardIcon /> },
+      { label: "Halls", href: "/admin/halls", icon: <HallsIcon /> },
+      { label: "Classes", href: "/admin/classes", icon: <ClassesIcon /> },
+      { label: "Trainers", href: "/admin/trainers", icon: <TrainersIcon /> },
+      { label: "Payments", href: "/admin/payments", icon: <PaymentsIcon /> },
+      { label: "Refunds", href: "/admin/refunds", icon: <RefundsIcon /> },
+      { label: "Notifications", href: "/admin/notifications", icon: <NotificationsIcon /> },
+      { label: "Profile", href: "/admin/profile", icon: <ProfileIcon /> },
+    ],
+    []
+  );
 
   return (
     <AppShell

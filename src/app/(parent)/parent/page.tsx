@@ -1,3 +1,5 @@
+"use client";
+
 import { PageHeader, EmptyState, Button } from "@/components/ui";
 
 export default function ParentDashboardPage() {

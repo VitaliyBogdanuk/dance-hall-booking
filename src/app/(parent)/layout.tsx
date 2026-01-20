@@ -1,16 +1,9 @@
 "use client";
 
 import { useSession } from "next-auth/react";
+import { useMemo } from "react";
 import { AppShell, type TabItem } from "@/components/layout";
 import { FAB } from "@/components/ui";
-
-const navItems: TabItem[] = [
-  { label: "Home", href: "/parent", icon: <DashboardIcon /> },
-  { label: "Bookings", href: "/parent/bookings", icon: <BookingsIcon /> },
-  { label: "Children", href: "/parent/children", icon: <ChildrenIcon /> },
-  { label: "Schedule", href: "/schedule", icon: <ScheduleIcon /> },
-  { label: "Profile", href: "/parent/profile", icon: <ProfileIcon /> },
-];
 
 export default function ParentLayout({
   children,
@@ -18,6 +11,17 @@ export default function ParentLayout({
   children: React.ReactNode;
 }>) {
   const { data: session } = useSession();
+
+  const navItems: TabItem[] = useMemo(
+    () => [
+      { label: "Home", href: "/parent", icon: <DashboardIcon /> },
+      { label: "Bookings", href: "/parent/bookings", icon: <BookingsIcon /> },
+      { label: "Children", href: "/parent/children", icon: <ChildrenIcon /> },
+      { label: "Schedule", href: "/schedule", icon: <ScheduleIcon /> },
+      { label: "Profile", href: "/parent/profile", icon: <ProfileIcon /> },
+    ],
+    []
+  );
 
   return (
     <AppShell
