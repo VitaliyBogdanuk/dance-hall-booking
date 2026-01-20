@@ -8,14 +8,14 @@ export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
 export function Card({ children, padding = "md", className = "", ...props }: CardProps) {
   const paddingStyles = {
     none: "",
-    sm: "p-4",
-    md: "p-6",
-    lg: "p-8",
+    sm: "p-3",
+    md: "p-4",
+    lg: "p-6",
   };
 
   return (
     <div
-      className={`bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-soft ${paddingStyles[padding]} ${className}`}
+      className={`bg-surface rounded-card shadow-soft transition-shadow duration-150 ${paddingStyles[padding]} ${className}`}
       {...props}
     >
       {children}
@@ -28,11 +28,11 @@ export function CardHeader({ children, className = "" }: { children: React.React
 }
 
 export function CardTitle({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <h3 className={`text-headline text-gray-900 dark:text-gray-100 ${className}`}>{children}</h3>;
+  return <h3 className={`text-headline text-text-primary ${className}`}>{children}</h3>;
 }
 
 export function CardDescription({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <p className={`text-body text-gray-600 dark:text-gray-400 mt-1 ${className}`}>{children}</p>;
+  return <p className={`text-body text-text-secondary mt-1 ${className}`}>{children}</p>;
 }
 
 export function CardContent({ 
@@ -46,9 +46,9 @@ export function CardContent({
 }) {
   const paddingStyles = {
     none: "",
-    sm: "p-4",
-    md: "p-6",
-    lg: "p-8 sm:p-12",
+    sm: "p-3",
+    md: "p-4",
+    lg: "p-6",
   };
   
   const paddingClass = padding ? paddingStyles[padding] : "";

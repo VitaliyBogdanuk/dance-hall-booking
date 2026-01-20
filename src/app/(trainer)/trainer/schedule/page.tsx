@@ -11,9 +11,11 @@ import {
   Input,
   Select,
   EmptyState,
-  Spinner,
   useToast,
   ToastContainer,
+  SkeletonList,
+  Badge,
+  FAB,
 } from "@/components/ui";
 import { apiGet, apiPost, apiPatch, datetimeLocalToISO, isoToDatetimeLocal, FetchError } from "@/lib/fetcher";
 
@@ -41,11 +43,10 @@ export default function TrainerSchedulePage() {
   const [classes, setClasses] = useState<ClassSession[]>([]);
   const [halls, setHalls] = useState<Hall[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingClass, setEditingClass] = useState<ClassSession | null>(null);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [cancelingClassId, setCancelingClassId] = useState<string | null>(null);
 
   const [createForm, setCreateForm] = useState({
     hallId: "",
@@ -66,18 +67,14 @@ export default function TrainerSchedulePage() {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      setError("");
-
       const [classesData, hallsData] = await Promise.all([
         apiGet<ClassSession[]>("/api/classes/mine"),
         apiGet<Hall[]>("/api/halls"),
       ]);
-
       setClasses(classesData);
       setHalls(hallsData.filter((h) => h.isActive));
     } catch (err) {
       const error = err as FetchError;
-      setError(error.message || "Failed to load data");
       showToast(error.message || "Failed to load data", "error");
     } finally {
       setLoading(false);
@@ -91,17 +88,22 @@ export default function TrainerSchedulePage() {
   const groupedClasses = useMemo(() => {
     const grouped: Record<string, ClassSession[]> = {};
     classes.forEach((cls) => {
-      const date = new Date(cls.startAt).toLocaleDateString("en-US", {
-        weekday: "long",
+      const dateKey = new Date(cls.startAt).toLocaleDateString("en-US", {
         year: "numeric",
         month: "long",
         day: "numeric",
       });
-      if (!grouped[date]) {
-        grouped[date] = [];
+      if (!grouped[dateKey]) {
+        grouped[dateKey] = [];
       }
-      grouped[date].push(cls);
+      grouped[dateKey].push(cls);
     });
+    
+    // Sort classes within each day by start time
+    Object.keys(grouped).forEach((date) => {
+      grouped[date].sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
+    });
+    
     return grouped;
   }, [classes]);
 
@@ -109,6 +111,30 @@ export default function TrainerSchedulePage() {
     return new Date(iso).toLocaleTimeString("en-US", {
       hour: "numeric",
       minute: "2-digit",
+    });
+  };
+
+  const formatDate = (iso: string) => {
+    const date = new Date(iso);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dateOnly = new Date(date);
+    dateOnly.setHours(0, 0, 0, 0);
+
+    if (dateOnly.getTime() === today.getTime()) {
+      return "Today";
+    }
+
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    if (dateOnly.getTime() === tomorrow.getTime()) {
+      return "Tomorrow";
+    }
+
+    return date.toLocaleDateString("en-US", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
     });
   };
 
@@ -148,12 +174,11 @@ export default function TrainerSchedulePage() {
         }
       }
 
-      const newClass = await apiPost<ClassSession>("/api/classes", payload);
-      setClasses([...classes, newClass].sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime()));
+      await apiPost<ClassSession>("/api/classes", payload);
       setIsCreateModalOpen(false);
       setCreateForm({ hallId: "", startAt: "", endAt: "", capacity: "", price: "" });
       showToast("Class created successfully", "success");
-      loadData(); // Reload to get updated list
+      loadData();
     } catch (err) {
       const error = err as FetchError;
       const isConflict = error.code === "CONFLICT" || error.message.includes("overlap") || error.message.includes("conflict");
@@ -173,7 +198,6 @@ export default function TrainerSchedulePage() {
       capacity: classSession.capacity.toString(),
       price: classSession.price?.toString() || "",
     });
-    setIsEditModalOpen(true);
   };
 
   const handleUpdate = async () => {
@@ -211,12 +235,10 @@ export default function TrainerSchedulePage() {
         }
       }
 
-      const updated = await apiPatch<ClassSession>(`/api/classes/${editingClass._id}`, payload);
-      setClasses(classes.map((c) => (c._id === updated._id ? updated : c)));
-      setIsEditModalOpen(false);
+      await apiPatch<ClassSession>(`/api/classes/${editingClass._id}`, payload);
       setEditingClass(null);
       showToast("Class updated successfully", "success");
-      loadData(); // Reload to get updated list
+      loadData();
     } catch (err) {
       const error = err as FetchError;
       const isConflict = error.code === "CONFLICT" || error.message.includes("overlap") || error.message.includes("conflict");
@@ -232,162 +254,125 @@ export default function TrainerSchedulePage() {
     }
 
     try {
-      setIsSubmitting(true);
-      const updated = await apiPatch<ClassSession>(`/api/classes/${classSession._id}`, {
+      setCancelingClassId(classSession._id);
+      await apiPatch<ClassSession>(`/api/classes/${classSession._id}`, {
         status: "CANCELED",
       });
-      setClasses(classes.map((c) => (c._id === updated._id ? updated : c)));
       showToast("Class canceled successfully", "success");
-      loadData(); // Reload to get updated list
+      loadData();
     } catch (err) {
       const error = err as FetchError;
       showToast(error.message || "Failed to cancel class", "error");
     } finally {
-      setIsSubmitting(false);
+      setCancelingClassId(null);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="max-w-7xl mx-auto">
-        <PageHeader title="My Schedule" description="Manage your dance classes" />
-        <div className="flex items-center justify-center py-16">
-          <Spinner size="lg" />
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="w-full">
-      <PageHeader
-        title="My Schedule"
-        description="Manage your dance classes"
-        action={
-          <Button 
-            onClick={() => setIsCreateModalOpen(true)} 
-            variant="primary"
-            className="w-full sm:w-auto"
-          >
-            + Create Class
-          </Button>
-        }
-      />
+    <div className="w-full space-y-4 pb-20">
+      <PageHeader title="My Schedule" description="Manage your dance classes" />
 
-      {error && !loading && (
-        <Card className="mb-4 sm:mb-6">
-          <CardContent className="p-4 sm:p-6">
-            <p className="text-sm sm:text-base text-red-600 dark:text-red-400">{error}</p>
-          </CardContent>
-        </Card>
+      {/* Loading State */}
+      {loading && <SkeletonList items={5} />}
+
+      {/* Empty State */}
+      {!loading && classes.length === 0 && (
+        <EmptyState
+          title="No classes yet"
+          description="Create your first class to get started"
+          icon={
+            <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          }
+        />
       )}
 
-      {classes.length === 0 ? (
-        <Card>
-          <CardContent padding="lg">
-            <EmptyState
-              title="No classes yet"
-              description="Create your first class to get started"
-              action={
-                <Button onClick={() => setIsCreateModalOpen(true)} variant="primary">
-                  + Create Class
-                </Button>
-              }
-            />
-          </CardContent>
-        </Card>
-      ) : (
+      {/* Day Grouped Classes */}
+      {!loading && classes.length > 0 && (
         <div className="space-y-6">
-          {Object.entries(groupedClasses).map(([date, dateClasses]) => (
-            <Card key={date}>
-              <CardContent>
-                <h3 className="text-headline text-gray-900 dark:text-gray-100 mb-4">{date}</h3>
+          {Object.entries(groupedClasses).map(([dateKey, dateClasses]) => {
+            const firstClass = dateClasses[0];
+            const displayDate = formatDate(firstClass.startAt);
+            
+            return (
+              <div key={dateKey} className="space-y-3">
+                <h3 className="text-lg font-semibold text-text-primary mb-3 px-1">{displayDate}</h3>
                 <div className="space-y-3">
                   {dateClasses.map((classSession) => {
                     const isCanceled = classSession.status === "CANCELED";
-                    const seatsLeft = classSession.capacity - classSession.takenSeats;
+
                     return (
-                      <div
+                      <Card
                         key={classSession._id}
-                        className={`p-4 sm:p-5 rounded-xl border ${
-                          isCanceled
-                            ? "bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700"
-                            : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800"
-                        }`}
+                        className={`${isCanceled ? "opacity-60" : "hover:shadow-soft-lg transition-shadow"}`}
                       >
-                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
-                              <p className="font-medium text-base sm:text-lg text-gray-900 dark:text-gray-100">
-                                {formatTime(classSession.startAt)} - {formatTime(classSession.endAt)}
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-2">
+                                <p className="text-2xl font-bold text-text-primary">
+                                  {formatTime(classSession.startAt)}
+                                </p>
+                                <Badge
+                                  variant={isCanceled ? "error" : "success"}
+                                  size="sm"
+                                >
+                                  {isCanceled ? "Canceled" : "Scheduled"}
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-text-secondary mb-3">
+                                {formatTime(classSession.endAt)} • {getHallName(classSession.hallId)}
                               </p>
-                              <span
-                                className={`px-2 py-1 rounded-lg text-xs font-medium whitespace-nowrap ${
-                                  isCanceled
-                                    ? "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
-                                    : "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300"
-                                }`}
-                              >
-                                {isCanceled ? "Canceled" : "Scheduled"}
-                              </span>
+                              <p className="text-sm text-text-secondary">
+                                <span className="font-medium text-text-primary">
+                                  {classSession.takenSeats} / {classSession.capacity}
+                                </span>{" "}
+                                seats booked
+                              </p>
                             </div>
-                            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-2 sm:mb-3">
-                              {getHallName(classSession.hallId)}
-                            </p>
-                            <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-sm text-gray-600 dark:text-gray-400">
-                              <span>
-                                {classSession.takenSeats} / {classSession.capacity} booked
-                              </span>
-                              <span className={`font-medium ${seatsLeft === 0 ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"}`}>
-                                {seatsLeft} {seatsLeft === 1 ? "seat" : "seats"} available
-                              </span>
-                              {classSession.price && (
-                                <span className="font-semibold text-gray-900 dark:text-gray-100">${classSession.price}</span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex flex-wrap gap-2 sm:flex-nowrap">
                             {!isCanceled && (
-                              <>
+                              <div className="flex flex-col gap-2 flex-shrink-0">
                                 <Button
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => router.push(`/trainer/classes/${classSession._id}/attendees`)}
-                                  className="flex-1 sm:flex-none"
+                                  className="min-w-[100px]"
                                 >
                                   Attendees
                                 </Button>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
                                   onClick={() => handleEdit(classSession)}
-                                  className="flex-1 sm:flex-none"
+                                  className="min-w-[100px]"
                                 >
                                   Edit
                                 </Button>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
                                   onClick={() => handleCancel(classSession)}
-                                  className="flex-1 sm:flex-none text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                                  isLoading={cancelingClassId === classSession._id}
+                                  className="min-w-[100px] text-red-600 hover:text-red-700 hover:bg-red-50"
                                 >
                                   Cancel
                                 </Button>
-                              </>
+                              </div>
                             )}
                           </div>
-                        </div>
-                      </div>
+                        </CardContent>
+                      </Card>
                     );
                   })}
                 </div>
-              </CardContent>
-            </Card>
-          ))}
+              </div>
+            );
+          })}
         </div>
       )}
 
-      {/* Create Modal */}
+      {/* Create Modal (Bottom Sheet) */}
       <Modal
         isOpen={isCreateModalOpen}
         onClose={() => {
@@ -446,7 +431,7 @@ export default function TrainerSchedulePage() {
             onChange={(e) => setCreateForm({ ...createForm, price: e.target.value })}
             disabled={isSubmitting}
           />
-          <div className="flex gap-3 justify-end pt-4">
+          <div className="flex gap-3 pt-2">
             <Button
               variant="ghost"
               onClick={() => {
@@ -454,106 +439,112 @@ export default function TrainerSchedulePage() {
                 setCreateForm({ hallId: "", startAt: "", endAt: "", capacity: "", price: "" });
               }}
               disabled={isSubmitting}
+              className="flex-1"
             >
               Cancel
             </Button>
-            <Button variant="primary" onClick={handleCreate} isLoading={isSubmitting}>
+            <Button variant="primary" onClick={handleCreate} isLoading={isSubmitting} className="flex-1">
               Create
             </Button>
           </div>
         </div>
       </Modal>
 
-      {/* Edit Modal */}
-      <Modal
-        isOpen={isEditModalOpen}
-        onClose={() => {
-          setIsEditModalOpen(false);
-          setEditingClass(null);
-        }}
-        title="Edit Class"
-        size="md"
-      >
-        <div className="space-y-4">
-          {editingClass && (
-            <>
-              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-xl mb-4">
-                <p className="text-sm text-gray-600 dark:text-gray-400">Taken Seats</p>
-                <p className="text-base font-medium text-gray-900 dark:text-gray-100">
-                  {editingClass.takenSeats} / {editingClass.capacity}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Capacity cannot be less than {editingClass.takenSeats}
-                </p>
-              </div>
-              <Select
-                label="Hall"
-                value={editForm.hallId}
-                onChange={(e) => setEditForm({ ...editForm, hallId: e.target.value })}
-                options={[
-                  { value: "", label: "Select a hall" },
-                  ...halls.map((h) => ({ value: h._id, label: h.name })),
-                ]}
-                required
-                disabled={isSubmitting}
-              />
-              <Input
-                type="datetime-local"
-                label="Start Time"
-                value={editForm.startAt}
-                onChange={(e) => setEditForm({ ...editForm, startAt: e.target.value })}
-                required
-                disabled={isSubmitting}
-              />
-              <Input
-                type="datetime-local"
-                label="End Time"
-                value={editForm.endAt}
-                onChange={(e) => setEditForm({ ...editForm, endAt: e.target.value })}
-                required
-                disabled={isSubmitting}
-              />
-              <Input
-                type="number"
-                label="Capacity"
-                placeholder="20"
-                min={editingClass.takenSeats}
-                max="60"
-                value={editForm.capacity}
-                onChange={(e) => setEditForm({ ...editForm, capacity: e.target.value })}
-                required
-                disabled={isSubmitting}
-                helperText={`Minimum: ${editingClass.takenSeats} (taken seats)`}
-              />
-              <Input
-                type="number"
-                label="Price (optional)"
-                placeholder="25.00"
-                step="0.01"
-                min="0"
-                value={editForm.price}
-                onChange={(e) => setEditForm({ ...editForm, price: e.target.value })}
-                disabled={isSubmitting}
-              />
-            </>
-          )}
-          <div className="flex gap-3 justify-end pt-4">
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setIsEditModalOpen(false);
-                setEditingClass(null);
-              }}
+      {/* Edit Modal (Bottom Sheet) */}
+      {editingClass && (
+        <Modal
+          isOpen={!!editingClass}
+          onClose={() => setEditingClass(null)}
+          title="Edit Class"
+          size="md"
+        >
+          <div className="space-y-4">
+            <div className="p-4 bg-accent-soft rounded-card">
+              <p className="text-sm text-text-secondary mb-1">Taken Seats</p>
+              <p className="text-lg font-bold text-text-primary">
+                {editingClass.takenSeats} / {editingClass.capacity}
+              </p>
+              <p className="text-xs text-text-secondary mt-1">
+                Capacity cannot be less than {editingClass.takenSeats}
+              </p>
+            </div>
+            <Select
+              label="Hall"
+              value={editForm.hallId}
+              onChange={(e) => setEditForm({ ...editForm, hallId: e.target.value })}
+              options={[
+                { value: "", label: "Select a hall" },
+                ...halls.map((h) => ({ value: h._id, label: h.name })),
+              ]}
+              required
               disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button variant="primary" onClick={handleUpdate} isLoading={isSubmitting}>
-              Save
-            </Button>
+            />
+            <Input
+              type="datetime-local"
+              label="Start Time"
+              value={editForm.startAt}
+              onChange={(e) => setEditForm({ ...editForm, startAt: e.target.value })}
+              required
+              disabled={isSubmitting}
+            />
+            <Input
+              type="datetime-local"
+              label="End Time"
+              value={editForm.endAt}
+              onChange={(e) => setEditForm({ ...editForm, endAt: e.target.value })}
+              required
+              disabled={isSubmitting}
+            />
+            <Input
+              type="number"
+              label="Capacity"
+              placeholder="20"
+              min={editingClass.takenSeats}
+              max="60"
+              value={editForm.capacity}
+              onChange={(e) => setEditForm({ ...editForm, capacity: e.target.value })}
+              required
+              disabled={isSubmitting}
+              helperText={`Minimum: ${editingClass.takenSeats} (taken seats)`}
+            />
+            <Input
+              type="number"
+              label="Price (optional)"
+              placeholder="25.00"
+              step="0.01"
+              min="0"
+              value={editForm.price}
+              onChange={(e) => setEditForm({ ...editForm, price: e.target.value })}
+              disabled={isSubmitting}
+            />
+            <div className="flex gap-3 pt-2">
+              <Button
+                variant="ghost"
+                onClick={() => setEditingClass(null)}
+                disabled={isSubmitting}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button variant="primary" onClick={handleUpdate} isLoading={isSubmitting} className="flex-1">
+                Save
+              </Button>
+            </div>
           </div>
-        </div>
-      </Modal>
+        </Modal>
+      )}
+
+      {/* FAB */}
+      <FAB
+        icon={
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+        }
+        label="Create class"
+        onClick={() => setIsCreateModalOpen(true)}
+        position="bottom-right"
+      />
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>

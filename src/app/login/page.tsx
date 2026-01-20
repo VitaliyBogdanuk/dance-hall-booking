@@ -2,6 +2,7 @@
 
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { Button, Card, CardContent, CardHeader, CardTitle, Input, useToast, ToastContainer } from "@/components/ui";
 
@@ -94,6 +95,12 @@ function LoginForm() {
             <Button type="submit" className="w-full" size="lg" isLoading={isLoading}>
               Sign In
             </Button>
+            <div className="text-center text-sm text-gray-600 dark:text-gray-400">
+              <span>Don&apos;t have an account? </span>
+              <Link href="/register" className="text-accent hover:underline font-medium">
+                Sign Up
+              </Link>
+            </div>
           </form>
         </CardContent>
       </Card>

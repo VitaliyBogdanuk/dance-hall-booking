@@ -7,9 +7,11 @@ import {
   CardContent,
   Button,
   EmptyState,
-  Spinner,
   useToast,
   ToastContainer,
+  SkeletonList,
+  Badge,
+  SegmentedControl,
 } from "@/components/ui";
 import { apiGet, apiDelete, FetchError } from "@/lib/fetcher";
 
@@ -39,18 +41,16 @@ export default function BookingsPage() {
   const { toasts, showToast, removeToast } = useToast();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [segment, setSegment] = useState<"upcoming" | "past">("upcoming");
   const [cancelingBookingId, setCancelingBookingId] = useState<string | null>(null);
 
   const loadBookings = useCallback(async () => {
     try {
       setLoading(true);
-      setError("");
       const data = await apiGet<Booking[]>("/api/bookings/mine");
       setBookings(data);
     } catch (err) {
       const error = err as FetchError;
-      setError(error.message || "Failed to load bookings");
       showToast(error.message || "Failed to load bookings", "error");
     } finally {
       setLoading(false);
@@ -71,7 +71,7 @@ export default function BookingsPage() {
       await apiDelete(`/api/bookings/${booking._id}`);
       setBookings(bookings.map((b) => (b._id === booking._id ? { ...b, status: "CANCELED" as const } : b)));
       showToast("Booking canceled successfully", "success");
-      await loadBookings(); // Reload to get updated data
+      await loadBookings();
     } catch (err) {
       const error = err as FetchError;
       showToast(error.message || "Failed to cancel booking", "error");
@@ -100,15 +100,11 @@ export default function BookingsPage() {
     };
   }, [bookings]);
 
-  const formatDateTime = (iso: string) => {
-    const date = new Date(iso);
-    return date.toLocaleDateString("en-US", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
+  const formatDate = (iso: string) => {
+    return new Date(iso).toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
       day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
     });
   };
 
@@ -123,125 +119,125 @@ export default function BookingsPage() {
     return booking.classSessionId.trainerId?.userId?.name || "Unknown Trainer";
   };
 
-  if (loading) {
-    return (
-      <div className="max-w-7xl mx-auto">
-        <PageHeader title="My Bookings" description="View and manage your class bookings" />
-        <div className="flex items-center justify-center py-16">
-          <Spinner size="lg" />
-        </div>
-      </div>
-    );
-  }
+  const displayedBookings = segment === "upcoming" ? upcoming : past;
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className="w-full space-y-4">
       <PageHeader title="My Bookings" description="View and manage your class bookings" />
 
-      {error && !loading && (
-        <Card className="mb-6">
-          <CardContent>
-            <p className="text-red-600 dark:text-red-400">{error}</p>
-          </CardContent>
-        </Card>
-      )}
+      {/* Loading State */}
+      {loading && <SkeletonList items={3} />}
 
-      {bookings.length === 0 ? (
-        <Card>
-          <CardContent padding="lg">
+      {/* Bookings List */}
+      {!loading && bookings.length > 0 && (
+        <>
+          <SegmentedControl
+            options={[
+              { value: "upcoming", label: `Upcoming (${upcoming.length})` },
+              { value: "past", label: `Past (${past.length})` },
+            ]}
+            value={segment}
+            onChange={(value) => setSegment(value as "upcoming" | "past")}
+            className="w-full"
+          />
+
+          {displayedBookings.length === 0 ? (
             <EmptyState
-              title="No bookings yet"
-              description="Browse the schedule to book your first class"
+              title={`No ${segment} bookings`}
+              description={
+                segment === "upcoming"
+                  ? "You don't have any upcoming classes. Browse the schedule to book one."
+                  : "You don't have any past bookings yet."
+              }
+              icon={
+                <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+              }
               action={
-                <Button variant="primary" onClick={() => (window.location.href = "/schedule")}>
-                  Browse Schedule
-                </Button>
+                segment === "upcoming" ? (
+                  <Button variant="primary" onClick={() => (window.location.href = "/schedule")}>
+                    Browse Schedule
+                  </Button>
+                ) : undefined
               }
             />
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-8">
-          {/* Upcoming Bookings */}
-          {upcoming.length > 0 && (
-            <div>
-              <h2 className="text-headline text-gray-900 dark:text-gray-100 mb-4">Upcoming</h2>
-              <div className="space-y-3">
-                {upcoming.map((booking) => (
-                  <Card key={booking._id} className="hover:shadow-soft-lg transition-shadow">
-                    <CardContent>
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1">
-                          <h3 className="text-base font-medium text-gray-900 dark:text-gray-100 mb-2">
-                            {formatDateTime(booking.classSessionId.startAt)}
-                          </h3>
-                          <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
-                            <p>
-                              Time: {formatTime(booking.classSessionId.startAt)} -{" "}
-                              {formatTime(booking.classSessionId.endAt)}
-                            </p>
-                            <p>Trainer: {getTrainerName(booking)}</p>
-                            <p>Hall: {booking.classSessionId.hallId.name}</p>
-                            <p>Child: {booking.childId.name}</p>
-                          </div>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleCancel(booking)}
-                          isLoading={cancelingBookingId === booking._id}
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          )}
+          ) : (
+            <div className="space-y-3">
+              {displayedBookings.map((booking) => {
+                const isPast = segment === "past";
+                const isCanceled = booking.status === "CANCELED";
 
-          {/* Past Bookings */}
-          {past.length > 0 && (
-            <div>
-              <h2 className="text-headline text-gray-900 dark:text-gray-100 mb-4">Past</h2>
-              <div className="space-y-3">
-                {past.map((booking) => (
+                return (
                   <Card
                     key={booking._id}
-                    className="hover:shadow-soft-lg transition-shadow opacity-75"
+                    className={`hover:shadow-soft-lg ${isPast ? "opacity-75" : ""}`}
                   >
-                    <CardContent>
+                    <CardContent className="p-4">
                       <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1">
+                        <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-2">
-                            <h3 className="text-base font-medium text-gray-900 dark:text-gray-100">
-                              {formatDateTime(booking.classSessionId.startAt)}
-                            </h3>
-                            {booking.status === "CANCELED" && (
-                              <span className="px-2 py-1 rounded-lg text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300">
+                            <p className="text-2xl font-bold text-text-primary">
+                              {formatTime(booking.classSessionId.startAt)}
+                            </p>
+                            {isCanceled && (
+                              <Badge variant="error" size="sm">
                                 Canceled
-                              </span>
+                              </Badge>
                             )}
                           </div>
-                          <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
+                          <p className="text-sm text-text-secondary mb-3">
+                            {formatDate(booking.classSessionId.startAt)} • {formatTime(booking.classSessionId.endAt)}
+                          </p>
+                          <div className="space-y-1 text-sm text-text-secondary">
                             <p>
-                              Time: {formatTime(booking.classSessionId.startAt)} -{" "}
-                              {formatTime(booking.classSessionId.endAt)}
+                              <span className="font-medium text-text-primary">Trainer:</span> {getTrainerName(booking)}
                             </p>
-                            <p>Trainer: {getTrainerName(booking)}</p>
-                            <p>Hall: {booking.classSessionId.hallId.name}</p>
-                            <p>Child: {booking.childId.name}</p>
+                            <p>
+                              <span className="font-medium text-text-primary">Hall:</span> {booking.classSessionId.hallId.name}
+                            </p>
+                            <p>
+                              <span className="font-medium text-text-primary">Child:</span> {booking.childId.name}
+                            </p>
                           </div>
                         </div>
+                        {!isPast && !isCanceled && (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => handleCancel(booking)}
+                            isLoading={cancelingBookingId === booking._id}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            Cancel
+                          </Button>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
-                ))}
-              </div>
+                );
+              })}
             </div>
           )}
-        </div>
+        </>
+      )}
+
+      {/* Empty State */}
+      {!loading && bookings.length === 0 && (
+        <EmptyState
+          title="No bookings yet"
+          description="Browse the schedule to book your first class"
+          icon={
+            <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+          }
+          action={
+            <Button variant="primary" onClick={() => (window.location.href = "/schedule")}>
+              Browse Schedule
+            </Button>
+          }
+        />
       )}
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />

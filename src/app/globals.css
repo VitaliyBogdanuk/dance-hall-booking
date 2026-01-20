@@ -2,18 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #1d1d1f;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #000000;
-    --foreground: #f5f5f7;
-  }
-}
-
 * {
   box-sizing: border-box;
   padding: 0;
@@ -30,12 +18,19 @@ body {
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
+  color: #111827;
+  background: #F7F8FA;
   line-height: 1.6;
   /* Mobile-first: improve touch targets */
   -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
   touch-action: manipulation;
+  /* Safe area support for iOS */
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Safe area utilities */
+.pb-safe {
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom));
 }
 
 /* Typography utilities */
@@ -70,40 +65,41 @@ body {
   font-size: 0.875rem;
   font-weight: 400;
   line-height: 1.5;
-  color: #86868b;
+  color: #6B7280;
 }
 
 /* Link styles */
 a {
-  color: #0071e3;
+  color: #19B37A;
   text-decoration: none;
-  transition: color 0.2s ease;
+  transition: color 150ms ease;
 }
 
 a:hover {
-  color: #0077ed;
+  color: #16a06a;
   text-decoration: underline;
 }
 
 a:focus-visible {
-  outline: 2px solid #0071e3;
+  outline: 2px solid #19B37A;
   outline-offset: 2px;
-  border-radius: 4px;
+  border-radius: 14px;
 }
 
 /* Focus ring styles */
 *:focus-visible {
-  outline: 2px solid #0071e3;
+  outline: 2px solid #19B37A;
   outline-offset: 2px;
-  border-radius: 4px;
+  border-radius: 14px;
 }
 
 button:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: 2px solid #0071e3;
+  outline: 2px solid #19B37A;
   outline-offset: 2px;
+  border-radius: 14px;
 }
 
 /* Smooth transitions */
@@ -111,7 +107,7 @@ button,
 a,
 input,
 select {
-  transition: all 0.2s ease;
+  transition: all 150ms ease;
 }
 
 /* Scrollbar styles */
@@ -126,7 +122,7 @@ select {
 
 ::-webkit-scrollbar-thumb {
   background: #d2d2d7;
-  border-radius: 4px;
+  border-radius: 14px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -145,10 +141,46 @@ select {
   }
 }
 
+@keyframes slide-in-from-bottom {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
 .animate-in {
-  animation: slide-in-from-top 0.3s ease-out;
+  animation: slide-in-from-top 200ms ease-out;
+}
+
+.animate-in-bottom {
+  animation: slide-in-from-bottom 200ms ease-out;
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    #f3f4f6 0%,
+    #e5e7eb 20%,
+    #f3f4f6 40%,
+    #f3f4f6 100%
+  );
+  background-size: 1000px 100%;
+  animation: shimmer 2s infinite linear;
 }
 
 .slide-in-from-top-5 {
-  animation: slide-in-from-top 0.3s ease-out;
+  animation: slide-in-from-top 200ms ease-out;
 }

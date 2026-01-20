@@ -88,7 +88,8 @@ export async function GET(_request: NextRequest) {
     await requireAdmin();
     await connectOnce();
 
-    const trainers = await TrainerProfileModel.find({ isActive: true })
+    // Return all trainers (active and inactive) so admin can manage them
+    const trainers = await TrainerProfileModel.find()
       .populate("userId", "name email phone")
       .sort({ createdAt: -1 })
       .lean();

@@ -91,7 +91,7 @@ export function InstallPrompt() {
         Install App
       </Button>
       {showIOSHint && (
-        <div className="absolute right-0 top-full mt-2 w-64 p-3 bg-gray-900 dark:bg-gray-800 text-white text-xs rounded-lg shadow-lg z-50">
+        <div className="absolute right-0 top-full mt-2 w-64 p-3 bg-gray-900 dark:bg-gray-800 text-white text-xs rounded-control shadow-lg z-50">
           <p className="font-medium mb-1">Install on iOS:</p>
           <p>Tap the Share button → &quot;Add to Home Screen&quot;</p>
           <div className="absolute -top-1 right-4 w-2 h-2 bg-gray-900 dark:bg-gray-800 rotate-45"></div>

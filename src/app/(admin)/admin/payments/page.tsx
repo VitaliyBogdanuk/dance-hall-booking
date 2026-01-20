@@ -10,9 +10,12 @@ import {
   Input,
   Select,
   EmptyState,
-  Spinner,
   useToast,
   ToastContainer,
+  SkeletonList,
+  Badge,
+  CollapsibleCard,
+  FAB,
 } from "@/components/ui";
 import { apiGet, apiPost, apiPatch, FetchError } from "@/lib/fetcher";
 
@@ -42,10 +45,8 @@ export default function PaymentsPage() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [parents, setParents] = useState<Parent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Filters
@@ -70,9 +71,6 @@ export default function PaymentsPage() {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      setError("");
-
-      // Load payments and parents in parallel
       const [paymentsData, parentsData] = await Promise.all([
         apiGet<Payment[]>("/api/admin/payments").catch(() => [] as Payment[]),
         apiGet<Parent[]>("/api/admin/parents").catch(() => [] as Parent[]),
@@ -80,7 +78,6 @@ export default function PaymentsPage() {
 
       setPayments(paymentsData);
 
-      // Combine parents from API and from payments (in case API fails)
       const uniqueParents = new Map<string, Parent>();
       parentsData.forEach((p) => {
         uniqueParents.set(p._id, p);
@@ -97,7 +94,6 @@ export default function PaymentsPage() {
       setParents(Array.from(uniqueParents.values()));
     } catch (err) {
       const error = err as FetchError;
-      setError(error.message || "Failed to load data");
       showToast(error.message || "Failed to load data", "error");
     } finally {
       setLoading(false);
@@ -134,7 +130,7 @@ export default function PaymentsPage() {
       const newPayment = await apiPost<Payment>("/api/admin/payments", {
         parentId: createForm.parentId,
         month: createForm.month,
-        amount: Math.round(amount * 100) / 100, // Round to 2 decimals
+        amount: Math.round(amount * 100) / 100,
         status: createForm.status,
         notes: createForm.notes.trim() || undefined,
       });
@@ -148,7 +144,7 @@ export default function PaymentsPage() {
         notes: "",
       });
       showToast("Payment record created successfully", "success");
-      loadData(); // Reload to get updated parent list
+      loadData();
     } catch (err) {
       const error = err as FetchError;
       showToast(error.message || "Failed to create payment", "error");
@@ -164,7 +160,6 @@ export default function PaymentsPage() {
       status: payment.status,
       notes: payment.notes || "",
     });
-    setIsEditModalOpen(true);
   };
 
   const handleUpdate = async () => {
@@ -184,7 +179,6 @@ export default function PaymentsPage() {
         notes: editForm.notes.trim() || undefined,
       });
       setPayments(payments.map((p) => (p._id === updated._id ? updated : p)));
-      setIsEditModalOpen(false);
       setEditingPayment(null);
       showToast("Payment updated successfully", "success");
     } catch (err) {
@@ -208,10 +202,17 @@ export default function PaymentsPage() {
     }).format(amount);
   };
 
-  const statusColors = {
-    PENDING: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300",
-    PAID: "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300",
-    OVERDUE: "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300",
+  const getStatusBadgeVariant = (status: Payment["status"]) => {
+    switch (status) {
+      case "PAID":
+        return "success";
+      case "OVERDUE":
+        return "error";
+      case "PENDING":
+        return "warning";
+      default:
+        return "default";
+    }
   };
 
   // Generate month options (last 12 months)
@@ -226,163 +227,124 @@ export default function PaymentsPage() {
     return options;
   }, []);
 
-  if (loading) {
-    return (
-      <div className="max-w-7xl mx-auto">
-        <PageHeader title="Payments" description="Manage payment records" />
-        <div className="flex items-center justify-center py-16">
-          <Spinner size="lg" />
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="max-w-7xl mx-auto">
-      <PageHeader
-        title="Payments"
-        description="Manage payment records"
-        action={
-          <Button onClick={() => setIsCreateModalOpen(true)} variant="primary">
-            Add Payment
-          </Button>
-        }
-      />
+    <div className="w-full space-y-4 pb-20">
+      <PageHeader title="Payments" description="Manage payment records" />
 
-      {/* Filters */}
-      <Card className="mb-6">
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Select
-              label="Status"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              options={[
-                { value: "", label: "All Statuses" },
-                { value: "PENDING", label: "Pending" },
-                { value: "PAID", label: "Paid" },
-                { value: "OVERDUE", label: "Overdue" },
-              ]}
-            />
-            <Select
-              label="Month"
-              value={monthFilter}
-              onChange={(e) => setMonthFilter(e.target.value)}
-              options={[
-                { value: "", label: "All Months" },
-                ...monthOptions.map((m) => ({
-                  value: m,
-                  label: formatMonth(m),
-                })),
-              ]}
-            />
-            <Input
-              label="Parent Email"
-              placeholder="Filter by email..."
-              value={emailFilter}
-              onChange={(e) => setEmailFilter(e.target.value)}
-            />
-          </div>
-        </CardContent>
-      </Card>
+      {/* Filters (Collapsible) */}
+      <CollapsibleCard title="Filters">
+        <div className="space-y-4">
+          <Select
+            label="Status"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            options={[
+              { value: "", label: "All Statuses" },
+              { value: "PENDING", label: "Pending" },
+              { value: "PAID", label: "Paid" },
+              { value: "OVERDUE", label: "Overdue" },
+            ]}
+          />
+          <Select
+            label="Month"
+            value={monthFilter}
+            onChange={(e) => setMonthFilter(e.target.value)}
+            options={[
+              { value: "", label: "All Months" },
+              ...monthOptions.map((m) => ({
+                value: m,
+                label: formatMonth(m),
+              })),
+            ]}
+          />
+          <Input
+            label="Parent Email"
+            placeholder="Filter by email..."
+            value={emailFilter}
+            onChange={(e) => setEmailFilter(e.target.value)}
+          />
+          {(statusFilter || monthFilter || emailFilter) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setStatusFilter("");
+                setMonthFilter("");
+                setEmailFilter("");
+              }}
+              className="w-full"
+            >
+              Clear Filters
+            </Button>
+          )}
+        </div>
+      </CollapsibleCard>
 
-      {error && !loading && (
-        <Card className="mb-6">
-          <CardContent>
-            <p className="text-red-600 dark:text-red-400">{error}</p>
-          </CardContent>
-        </Card>
+      {/* Loading State */}
+      {loading && <SkeletonList items={3} />}
+
+      {/* Empty State */}
+      {!loading && filteredPayments.length === 0 && (
+        <EmptyState
+          title="No payments found"
+          description={
+            payments.length === 0
+              ? "Create your first payment record to get started"
+              : "No payments match your filters"
+          }
+          icon={
+            <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+          }
+        />
       )}
 
-      {filteredPayments.length === 0 ? (
-        <Card>
-          <CardContent padding="lg">
-            <EmptyState
-              title="No payments found"
-              description={
-                payments.length === 0
-                  ? "Create your first payment record to get started"
-                  : "No payments match your filters"
-              }
-              action={
-                payments.length === 0 ? (
-                  <Button onClick={() => setIsCreateModalOpen(true)} variant="primary">
-                    Add Payment
-                  </Button>
-                ) : undefined
-              }
-            />
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardContent padding="none">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Parent
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Month
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Amount
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Notes
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
-                  {filteredPayments.map((payment) => (
-                    <tr key={payment._id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                            {payment.parentId.name}
-                          </div>
-                          <div className="text-sm text-gray-500 dark:text-gray-400">{payment.parentId.email}</div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                        {formatMonth(payment.month)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
+      {/* Payments List (Cards) */}
+      {!loading && filteredPayments.length > 0 && (
+        <div className="space-y-3">
+          {filteredPayments.map((payment) => (
+            <Card key={payment._id} className="hover:shadow-soft-lg">
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-2">
+                      <h3 className="text-lg font-semibold text-text-primary">
+                        {payment.parentId.name}
+                      </h3>
+                      <Badge variant={getStatusBadgeVariant(payment.status)} size="sm">
+                        {payment.status}
+                      </Badge>
+                    </div>
+                    <div className="space-y-1 text-sm text-text-secondary mb-3">
+                      <p>{payment.parentId.email}</p>
+                      <p>{formatMonth(payment.month)}</p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <p className="text-xl font-bold text-text-primary">
                         {formatCurrency(payment.amount)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`px-2 py-1 rounded-lg text-xs font-medium ${statusColors[payment.status]}`}
-                        >
-                          {payment.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate">
-                        {payment.notes || "-"}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <Button variant="ghost" size="sm" onClick={() => handleEdit(payment)}>
-                          Edit
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+                      </p>
+                    </div>
+                    {payment.notes && (
+                      <p className="text-sm text-text-secondary mt-2">{payment.notes}</p>
+                    )}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleEdit(payment)}
+                    className="flex-shrink-0"
+                  >
+                    Edit
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       )}
 
-      {/* Create Modal */}
+      {/* Create Modal (Bottom Sheet) */}
       <Modal
         isOpen={isCreateModalOpen}
         onClose={() => {
@@ -458,7 +420,7 @@ export default function PaymentsPage() {
             onChange={(e) => setCreateForm({ ...createForm, notes: e.target.value })}
             disabled={isSubmitting}
           />
-          <div className="flex gap-3 justify-end pt-4">
+          <div className="flex gap-3 pt-2">
             <Button
               variant="ghost"
               onClick={() => {
@@ -472,89 +434,96 @@ export default function PaymentsPage() {
                 });
               }}
               disabled={isSubmitting}
+              className="flex-1"
             >
               Cancel
             </Button>
-            <Button variant="primary" onClick={handleCreate} isLoading={isSubmitting}>
+            <Button variant="primary" onClick={handleCreate} isLoading={isSubmitting} className="flex-1">
               Create
             </Button>
           </div>
         </div>
       </Modal>
 
-      {/* Edit Modal */}
-      <Modal
-        isOpen={isEditModalOpen}
-        onClose={() => {
-          setIsEditModalOpen(false);
-          setEditingPayment(null);
-        }}
-        title="Edit Payment"
-        size="md"
-      >
-        <div className="space-y-4">
-          {editingPayment && (
-            <>
-              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-xl">
-                <p className="text-sm text-gray-600 dark:text-gray-400">Parent</p>
-                <p className="text-base font-medium text-gray-900 dark:text-gray-100">
-                  {editingPayment.parentId.name} ({editingPayment.parentId.email})
-                </p>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">Month</p>
-                <p className="text-base font-medium text-gray-900 dark:text-gray-100">
-                  {formatMonth(editingPayment.month)}
-                </p>
-              </div>
-              <Input
-                type="number"
-                label="Amount"
-                placeholder="0.00"
-                step="0.01"
-                min="0"
-                value={editForm.amount}
-                onChange={(e) => setEditForm({ ...editForm, amount: e.target.value })}
-                required
-                disabled={isSubmitting}
-              />
-              <Select
-                label="Status"
-                value={editForm.status}
-                onChange={(e) =>
-                  setEditForm({ ...editForm, status: e.target.value as "PENDING" | "PAID" | "OVERDUE" })
-                }
-                options={[
-                  { value: "PENDING", label: "Pending" },
-                  { value: "PAID", label: "Paid" },
-                  { value: "OVERDUE", label: "Overdue" },
-                ]}
-                disabled={isSubmitting}
-              />
-              <Input
-                label="Notes (optional)"
-                placeholder="Payment notes..."
-                value={editForm.notes}
-                onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
-                disabled={isSubmitting}
-              />
-            </>
-          )}
-          <div className="flex gap-3 justify-end pt-4">
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setIsEditModalOpen(false);
-                setEditingPayment(null);
-              }}
+      {/* Edit Modal (Bottom Sheet) */}
+      {editingPayment && (
+        <Modal
+          isOpen={!!editingPayment}
+          onClose={() => setEditingPayment(null)}
+          title="Edit Payment"
+          size="md"
+        >
+          <div className="space-y-4">
+            <div className="p-4 bg-accent-soft rounded-card">
+              <p className="text-sm text-text-secondary mb-1">Parent</p>
+              <p className="text-base font-semibold text-text-primary">
+                {editingPayment.parentId.name}
+              </p>
+              <p className="text-sm text-text-secondary">{editingPayment.parentId.email}</p>
+              <p className="text-sm text-text-secondary mt-2 mb-1">Month</p>
+              <p className="text-base font-semibold text-text-primary">
+                {formatMonth(editingPayment.month)}
+              </p>
+            </div>
+            <Input
+              type="number"
+              label="Amount"
+              placeholder="0.00"
+              step="0.01"
+              min="0"
+              value={editForm.amount}
+              onChange={(e) => setEditForm({ ...editForm, amount: e.target.value })}
+              required
               disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button variant="primary" onClick={handleUpdate} isLoading={isSubmitting}>
-              Save
-            </Button>
+            />
+            <Select
+              label="Status"
+              value={editForm.status}
+              onChange={(e) =>
+                setEditForm({ ...editForm, status: e.target.value as "PENDING" | "PAID" | "OVERDUE" })
+              }
+              options={[
+                { value: "PENDING", label: "Pending" },
+                { value: "PAID", label: "Paid" },
+                { value: "OVERDUE", label: "Overdue" },
+              ]}
+              disabled={isSubmitting}
+            />
+            <Input
+              label="Notes (optional)"
+              placeholder="Payment notes..."
+              value={editForm.notes}
+              onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+              disabled={isSubmitting}
+            />
+            <div className="flex gap-3 pt-2">
+              <Button
+                variant="ghost"
+                onClick={() => setEditingPayment(null)}
+                disabled={isSubmitting}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button variant="primary" onClick={handleUpdate} isLoading={isSubmitting} className="flex-1">
+                Save
+              </Button>
+            </div>
           </div>
-        </div>
-      </Modal>
+        </Modal>
+      )}
+
+      {/* FAB */}
+      <FAB
+        icon={
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+        }
+        label="Add payment"
+        onClick={() => setIsCreateModalOpen(true)}
+        position="bottom-right"
+      />
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>

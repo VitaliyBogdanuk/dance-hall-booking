@@ -43,24 +43,24 @@ export function Modal({ isOpen, onClose, title, children, size = "md" }: ModalPr
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm transition-opacity duration-150"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-labelledby={title ? "modal-title" : undefined}
     >
       <div
-        className={`bg-white dark:bg-gray-900 rounded-3xl shadow-soft-lg ${sizeStyles[size]} w-full max-h-[90vh] overflow-y-auto`}
+        className={`bg-surface rounded-t-card sm:rounded-card shadow-soft-lg ${sizeStyles[size]} w-full max-w-[440px] max-h-[90vh] overflow-y-auto animate-in-bottom`}
         onClick={(e) => e.stopPropagation()}
       >
         {title && (
-          <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-800">
-            <h2 id="modal-title" className="text-title text-gray-900 dark:text-gray-100">
+          <div className="flex items-center justify-between p-4 border-b border-gray-100">
+            <h2 id="modal-title" className="text-title text-text-primary">
               {title}
             </h2>
             <button
               onClick={onClose}
-              className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              className="p-2 text-text-secondary hover:text-text-primary rounded-control hover:bg-accent-soft transition-colors touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center"
               aria-label="Close modal"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -69,7 +69,7 @@ export function Modal({ isOpen, onClose, title, children, size = "md" }: ModalPr
             </button>
           </div>
         )}
-        <div className="p-6">{children}</div>
+        <div className="p-4">{children}</div>
       </div>
     </div>
   );

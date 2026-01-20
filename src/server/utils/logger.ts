@@ -22,6 +22,7 @@ export const logger = {
    * Logs an info-level event.
    */
   logInfo: (eventName: string, payload?: LogPayload) => {
+    // eslint-disable-next-line no-console
     console.log(formatLog("info", eventName, payload));
   },
 
@@ -53,6 +54,7 @@ export const logger = {
    */
   logDebug: (eventName: string, payload?: LogPayload) => {
     if (process.env.NODE_ENV === "development") {
+      // eslint-disable-next-line no-console
       console.debug(formatLog("debug", eventName, payload));
     }
   },

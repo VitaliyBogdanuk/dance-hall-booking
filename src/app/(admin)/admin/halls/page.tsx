@@ -10,9 +10,11 @@ import {
   Modal,
   Input,
   EmptyState,
-  Spinner,
   useToast,
   ToastContainer,
+  SkeletonList,
+  Badge,
+  FAB,
 } from "@/components/ui";
 import { apiGet, apiPost, apiPatch, FetchError } from "@/lib/fetcher";
 
@@ -29,10 +31,8 @@ export default function HallsPage() {
   const { toasts, showToast, removeToast } = useToast();
   const [halls, setHalls] = useState<Hall[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingHall, setEditingHall] = useState<Hall | null>(null);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [createForm, setCreateForm] = useState({ name: "" });
@@ -41,12 +41,10 @@ export default function HallsPage() {
   const loadHalls = useCallback(async () => {
     try {
       setLoading(true);
-      setError("");
       const data = await apiGet<Hall[]>("/api/halls");
       setHalls(data);
     } catch (err) {
       const error = err as FetchError;
-      setError(error.message || "Failed to load halls");
       showToast(error.message || "Failed to load halls", "error");
     } finally {
       setLoading(false);
@@ -81,7 +79,6 @@ export default function HallsPage() {
   const handleEdit = (hall: Hall) => {
     setEditingHall(hall);
     setEditForm({ name: hall.name, isActive: hall.isActive });
-    setIsEditModalOpen(true);
   };
 
   const handleUpdate = async () => {
@@ -97,7 +94,6 @@ export default function HallsPage() {
         isActive: editForm.isActive,
       });
       setHalls(halls.map((h) => (h._id === updated._id ? updated : h)));
-      setIsEditModalOpen(false);
       setEditingHall(null);
       showToast("Hall updated successfully", "success");
     } catch (err) {
@@ -108,84 +104,59 @@ export default function HallsPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="max-w-7xl mx-auto">
-        <PageHeader title="Halls" description="Manage dance halls and studios" />
-        <div className="flex items-center justify-center py-16">
-          <Spinner size="lg" />
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="max-w-7xl mx-auto">
-      <PageHeader
-        title="Halls"
-        description="Manage dance halls and studios"
-        action={
-          <Button onClick={() => setIsCreateModalOpen(true)} variant="primary">
-            Add Hall
-          </Button>
-        }
-      />
+    <div className="w-full space-y-4 pb-20">
+      <PageHeader title="Halls" description="Manage dance halls and studios" />
 
-      {error && !loading && (
-        <Card className="mb-6">
-          <CardContent>
-            <p className="text-red-600 dark:text-red-400">{error}</p>
-          </CardContent>
-        </Card>
+      {/* Loading State */}
+      {loading && <SkeletonList items={3} />}
+
+      {/* Empty State */}
+      {!loading && halls.length === 0 && (
+        <EmptyState
+          title="No halls yet"
+          description="Create your first hall to get started"
+          icon={
+            <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+          }
+        />
       )}
 
-      {halls.length === 0 ? (
-        <Card>
-          <CardContent padding="lg">
-            <EmptyState
-              title="No halls yet"
-              description="Create your first hall to get started"
-              action={
-                <Button onClick={() => setIsCreateModalOpen(true)} variant="primary">
-                  Add Hall
-                </Button>
-              }
-            />
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Halls List */}
+      {!loading && halls.length > 0 && (
+        <div className="space-y-3">
           {halls.map((hall) => (
-            <Card key={hall._id} className="hover:shadow-soft-lg transition-shadow">
-              <CardContent>
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <h3 className="text-headline text-gray-900 dark:text-gray-100 mb-1">{hall.name}</h3>
-                    <div className="flex items-center gap-2 mt-2">
-                      <span
-                        className={`px-2 py-1 rounded-lg text-xs font-medium ${
-                          hall.isActive
-                            ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300"
-                            : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
-                        }`}
-                      >
+            <Card key={hall._id} className="hover:shadow-soft-lg">
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-2">
+                      <h3 className="text-lg font-semibold text-text-primary">{hall.name}</h3>
+                      <Badge variant={hall.isActive ? "success" : "default"} size="sm">
                         {hall.isActive ? "Active" : "Inactive"}
-                      </span>
+                      </Badge>
                     </div>
                   </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => router.push(`/admin/halls/${hall._id}/blocks`)}
-                    className="flex-1"
-                  >
-                    View Blocks
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => handleEdit(hall)}>
-                    Edit
-                  </Button>
+                  <div className="flex flex-col gap-2 flex-shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => router.push(`/admin/halls/${hall._id}/blocks`)}
+                      className="min-w-[120px]"
+                    >
+                      View Blocks
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEdit(hall)}
+                      className="min-w-[120px]"
+                    >
+                      Edit
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -193,7 +164,7 @@ export default function HallsPage() {
         </div>
       )}
 
-      {/* Create Modal */}
+      {/* Create Modal (Bottom Sheet) */}
       <Modal
         isOpen={isCreateModalOpen}
         onClose={() => {
@@ -201,6 +172,7 @@ export default function HallsPage() {
           setCreateForm({ name: "" });
         }}
         title="Add Hall"
+        size="md"
       >
         <div className="space-y-4">
           <Input
@@ -211,7 +183,7 @@ export default function HallsPage() {
             required
             disabled={isSubmitting}
           />
-          <div className="flex gap-3 justify-end pt-4">
+          <div className="flex gap-3 pt-2">
             <Button
               variant="ghost"
               onClick={() => {
@@ -219,64 +191,75 @@ export default function HallsPage() {
                 setCreateForm({ name: "" });
               }}
               disabled={isSubmitting}
+              className="flex-1"
             >
               Cancel
             </Button>
-            <Button variant="primary" onClick={handleCreate} isLoading={isSubmitting}>
+            <Button variant="primary" onClick={handleCreate} isLoading={isSubmitting} className="flex-1">
               Create
             </Button>
           </div>
         </div>
       </Modal>
 
-      {/* Edit Modal */}
-      <Modal
-        isOpen={isEditModalOpen}
-        onClose={() => {
-          setIsEditModalOpen(false);
-          setEditingHall(null);
-        }}
-        title="Edit Hall"
-      >
-        <div className="space-y-4">
-          <Input
-            label="Hall Name"
-            placeholder="Main Studio"
-            value={editForm.name}
-            onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-            required
-            disabled={isSubmitting}
-          />
-          <div className="flex items-center gap-3">
-            <input
-              type="checkbox"
-              id="isActive"
-              checked={editForm.isActive}
-              onChange={(e) => setEditForm({ ...editForm, isActive: e.target.checked })}
-              className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+      {/* Edit Modal (Bottom Sheet) */}
+      {editingHall && (
+        <Modal
+          isOpen={!!editingHall}
+          onClose={() => setEditingHall(null)}
+          title="Edit Hall"
+          size="md"
+        >
+          <div className="space-y-4">
+            <Input
+              label="Hall Name"
+              placeholder="Main Studio"
+              value={editForm.name}
+              onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+              required
               disabled={isSubmitting}
             />
-            <label htmlFor="isActive" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Active
-            </label>
+            <div className="flex items-center gap-3 p-4 bg-accent-soft rounded-card">
+              <input
+                type="checkbox"
+                id="isActive"
+                checked={editForm.isActive}
+                onChange={(e) => setEditForm({ ...editForm, isActive: e.target.checked })}
+                className="w-5 h-5 rounded-control border-gray-300 text-accent focus:ring-accent"
+                disabled={isSubmitting}
+              />
+              <label htmlFor="isActive" className="text-sm font-medium text-text-primary">
+                Active
+              </label>
+            </div>
+            <div className="flex gap-3 pt-2">
+              <Button
+                variant="ghost"
+                onClick={() => setEditingHall(null)}
+                disabled={isSubmitting}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button variant="primary" onClick={handleUpdate} isLoading={isSubmitting} className="flex-1">
+                Save
+              </Button>
+            </div>
           </div>
-          <div className="flex gap-3 justify-end pt-4">
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setIsEditModalOpen(false);
-                setEditingHall(null);
-              }}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button variant="primary" onClick={handleUpdate} isLoading={isSubmitting}>
-              Save
-            </Button>
-          </div>
-        </div>
-      </Modal>
+        </Modal>
+      )}
+
+      {/* FAB */}
+      <FAB
+        icon={
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+        }
+        label="Add hall"
+        onClick={() => setIsCreateModalOpen(true)}
+        position="bottom-right"
+      />
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>

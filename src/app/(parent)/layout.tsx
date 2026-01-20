@@ -1,13 +1,15 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { AppShell, type NavItem } from "@/components/layout";
+import { AppShell, type TabItem } from "@/components/layout";
+import { FAB } from "@/components/ui";
 
-const navItems: NavItem[] = [
-  { label: "Dashboard", href: "/parent", icon: <DashboardIcon /> },
-  { label: "My Bookings", href: "/parent/bookings", icon: <BookingsIcon /> },
-  { label: "My Children", href: "/parent/children", icon: <ChildrenIcon /> },
+const navItems: TabItem[] = [
+  { label: "Home", href: "/parent", icon: <DashboardIcon /> },
+  { label: "Bookings", href: "/parent/bookings", icon: <BookingsIcon /> },
+  { label: "Children", href: "/parent/children", icon: <ChildrenIcon /> },
   { label: "Schedule", href: "/schedule", icon: <ScheduleIcon /> },
+  { label: "Profile", href: "/parent/profile", icon: <ProfileIcon /> },
 ];
 
 export default function ParentLayout({
@@ -19,13 +21,25 @@ export default function ParentLayout({
 
   return (
     <AppShell
+      navigationType="bottom-tabs"
       navItems={navItems}
       user={
         session?.user
           ? { name: session.user.name || "User", role: session.user.role }
           : undefined
       }
-      title="Parent Dashboard"
+      title="Parent"
+      fab={
+        <FAB
+          icon={<PlusIcon />}
+          label="Add booking"
+          position="bottom-right"
+          className="!bottom-20"
+          onClick={() => {
+            // TODO: Open booking modal
+          }}
+        />
+      }
     >
       {children}
     </AppShell>
@@ -60,6 +74,22 @@ function ScheduleIcon() {
   return (
     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" className="w-5 h-5">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  );
+}
+
+function PlusIcon() {
+  return (
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" className="w-6 h-6">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+    </svg>
+  );
+}
+
+function ProfileIcon() {
+  return (
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" className="w-5 h-5">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
     </svg>
   );
 }

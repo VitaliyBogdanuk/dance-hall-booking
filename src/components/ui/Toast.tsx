@@ -27,10 +27,10 @@ function ToastComponent({ toast, onRemove }: ToastProps) {
   }, [toast, onRemove]);
 
   const typeStyles = {
-    success: "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-800 dark:text-green-200",
-    error: "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-800 dark:text-red-200",
-    info: "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200",
-    warning: "bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800 text-yellow-800 dark:text-yellow-200",
+    success: "bg-accent-soft border-accent/20 text-accent",
+    error: "bg-red-50 border-red-200 text-red-800",
+    info: "bg-blue-50 border-blue-200 text-blue-800",
+    warning: "bg-orange-50 border-orange-200 text-orange-800",
   };
 
   const icons = {
@@ -74,7 +74,7 @@ function ToastComponent({ toast, onRemove }: ToastProps) {
 
   return (
     <div
-      className={`flex items-start gap-3 p-4 rounded-2xl border ${typeStyles[toast.type]} shadow-soft-lg min-w-[300px] max-w-md animate-in`}
+      className={`flex items-start gap-3 p-4 rounded-card border ${typeStyles[toast.type]} shadow-soft-lg w-full`}
       role="alert"
       aria-live="polite"
     >
@@ -82,7 +82,7 @@ function ToastComponent({ toast, onRemove }: ToastProps) {
       <p className="flex-1 text-sm font-medium">{toast.message}</p>
       <button
         onClick={() => onRemove(toast.id)}
-        className="flex-shrink-0 p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded-lg transition-colors"
+        className="flex-shrink-0 p-1 hover:bg-black/10 rounded-control transition-colors touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center"
         aria-label="Close toast"
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -95,9 +95,9 @@ function ToastComponent({ toast, onRemove }: ToastProps) {
 
 export function ToastContainer({ toasts, onRemove }: { toasts: Toast[]; onRemove: (id: string) => void }) {
   return (
-    <div className="fixed top-4 right-4 z-50 flex flex-col gap-3 pointer-events-none">
+    <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:max-w-md z-50 flex flex-col gap-3 pointer-events-none">
       {toasts.map((toast) => (
-        <div key={toast.id} className="pointer-events-auto">
+        <div key={toast.id} className="pointer-events-auto animate-in-bottom">
           <ToastComponent toast={toast} onRemove={onRemove} />
         </div>
       ))}

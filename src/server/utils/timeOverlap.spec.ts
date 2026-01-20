@@ -7,6 +7,7 @@ import { overlaps, buildOverlapQuery } from "./timeOverlap";
  * Or compile and run: npx tsx src/server/utils/timeOverlap.spec.ts
  */
 export function runSelfTest(): void {
+  // eslint-disable-next-line no-console
   console.log("Running timeOverlap self-tests...");
 
   // Test 1: Overlapping ranges
@@ -60,6 +61,7 @@ export function runSelfTest(): void {
   assert.strictEqual(query2.startAt.$lt.getTime(), end9.getTime(), "Query should use correct end time");
   assert.strictEqual(query2.endAt.$gt.getTime(), start9.getTime(), "Query should use correct start time");
 
+  // eslint-disable-next-line no-console
   console.log("✅ All timeOverlap tests passed!");
 }
 

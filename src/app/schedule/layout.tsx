@@ -1,9 +1,9 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { AppShell, type NavItem } from "@/components/layout";
+import { AppShell, type DrawerItem, type TabItem } from "@/components/layout";
 
-function getNavItemsForRole(role?: string): NavItem[] {
+function getNavItemsForRole(role?: string): DrawerItem[] | TabItem[] {
   if (role === "ADMIN") {
     return [
       { label: "Dashboard", href: "/admin", icon: <DashboardIcon /> },
@@ -11,26 +11,30 @@ function getNavItemsForRole(role?: string): NavItem[] {
       { label: "Schedule", href: "/schedule", icon: <ScheduleIcon /> },
       { label: "Trainers", href: "/admin/trainers", icon: <TrainersIcon /> },
       { label: "Payments", href: "/admin/payments", icon: <PaymentsIcon /> },
-    ];
+    ] as DrawerItem[];
   } else if (role === "TRAINER") {
     return [
       { label: "Dashboard", href: "/trainer", icon: <DashboardIcon /> },
       { label: "Schedule", href: "/schedule", icon: <ScheduleIcon /> },
       { label: "My Classes", href: "/trainer/schedule", icon: <ClassesIcon /> },
-    ];
+    ] as DrawerItem[];
   } else if (role === "PARENT") {
     return [
-      { label: "Dashboard", href: "/parent", icon: <DashboardIcon /> },
+      { label: "Home", href: "/parent", icon: <DashboardIcon /> },
+      { label: "Bookings", href: "/parent/bookings", icon: <BookingsIcon /> },
+      { label: "Children", href: "/parent/children", icon: <ChildrenIcon /> },
       { label: "Schedule", href: "/schedule", icon: <ScheduleIcon /> },
-      { label: "My Bookings", href: "/parent/bookings", icon: <BookingsIcon /> },
-      { label: "My Children", href: "/parent/children", icon: <ChildrenIcon /> },
-    ];
+    ] as TabItem[];
   }
   
   // Default nav for authenticated users without specific role
   return [
     { label: "Schedule", href: "/schedule", icon: <ScheduleIcon /> },
-  ];
+  ] as DrawerItem[];
+}
+
+function getNavigationType(role?: string): "bottom-tabs" | "side-drawer" {
+  return role === "PARENT" ? "bottom-tabs" : "side-drawer";
 }
 
 export default function ScheduleLayout({
@@ -39,16 +43,18 @@ export default function ScheduleLayout({
   children: React.ReactNode;
 }>) {
   const { data: session } = useSession();
+  const navigationType = getNavigationType(session?.user?.role);
 
   return (
     <AppShell
+      navigationType={navigationType}
       navItems={getNavItemsForRole(session?.user?.role)}
       user={
         session?.user
           ? { name: session.user.name || "User", role: session.user.role }
           : undefined
       }
-      title="Class Schedule"
+      title="Schedule"
     >
       {children}
     </AppShell>

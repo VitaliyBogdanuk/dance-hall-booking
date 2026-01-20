@@ -2,31 +2,79 @@
 
 import React, { useState } from "react";
 import { TopBar, type TopBarProps } from "./TopBar";
-import { SideNav, type NavItem } from "./SideNav";
+import { SideDrawer, type DrawerItem } from "./SideDrawer";
+import { BottomTabs, type TabItem } from "./BottomTabs";
+
+export type NavigationType = "bottom-tabs" | "side-drawer";
 
 export interface AppShellProps {
   children: React.ReactNode;
-  navItems: NavItem[];
+  navigationType?: NavigationType;
+  navItems: DrawerItem[] | TabItem[];
   user?: TopBarProps["user"];
   title?: string;
+  showSearch?: boolean;
+  onSearchClick?: () => void;
+  showNotifications?: boolean;
+  onNotificationsClick?: () => void;
+  fab?: React.ReactNode;
 }
 
-export function AppShell({ children, navItems, user, title }: AppShellProps) {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+export function AppShell({
+  children,
+  navigationType = "side-drawer",
+  navItems,
+  user,
+  title,
+  showSearch,
+  onSearchClick,
+  showNotifications,
+  onNotificationsClick,
+  fab,
+}: AppShellProps) {
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  const hasBottomTabs = navigationType === "bottom-tabs";
+  const hasSideDrawer = navigationType === "side-drawer";
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <TopBar title={title} user={user} onMenuClick={() => setIsMobileMenuOpen(true)} />
-      <SideNav 
-        items={navItems} 
-        isOpen={isMobileMenuOpen} 
-        onClose={() => setIsMobileMenuOpen(false)}
-        showLogout={!!user} // Show logout in mobile menu if user is logged in
+    <div className="min-h-screen bg-background flex flex-col">
+      {hasSideDrawer && (
+        <SideDrawer
+          items={navItems as DrawerItem[]}
+          isOpen={isDrawerOpen}
+          onClose={() => setIsDrawerOpen(false)}
+          user={user}
+        />
+      )}
+      
+      <TopBar
+        title={title}
+        user={user}
+        onMenuClick={hasSideDrawer ? () => setIsDrawerOpen(true) : undefined}
+        showSearch={showSearch}
+        onSearchClick={onSearchClick}
+        showNotifications={showNotifications}
+        onNotificationsClick={onNotificationsClick}
+        hasSideDrawer={hasSideDrawer}
       />
-      {/* Mobile-first: no padding on mobile, add padding on larger screens */}
-      <main className="pt-14 sm:pt-16 lg:pl-64">
-        <div className="p-4 sm:p-6 lg:p-8">{children}</div>
+
+      {/* Main Content */}
+      <main
+        className={`flex-1 ${
+          hasBottomTabs ? "pb-20" : ""
+        } ${hasSideDrawer ? "lg:pl-72" : ""} pt-14 sm:pt-16`}
+      >
+        <div className="px-4 max-w-[440px] mx-auto lg:max-w-none lg:px-6 lg:py-8">
+          {children}
+        </div>
       </main>
+
+      {/* Bottom Tabs */}
+      {hasBottomTabs && <BottomTabs items={navItems as TabItem[]} />}
+
+      {/* FAB */}
+      {fab}
     </div>
   );
 }

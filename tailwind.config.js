@@ -8,8 +8,13 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        background: "var(--background)",
-        foreground: "var(--foreground)",
+        background: "#F7F8FA",
+        surface: "#FFFFFF",
+        "text-primary": "#111827",
+        "text-secondary": "#6B7280",
+        accent: "#19B37A",
+        "accent-soft": "#E6F6EF",
+        "accent-secondary": "#FF7A45",
       },
       fontFamily: {
         sans: [
@@ -27,8 +32,8 @@ module.exports = {
         88: "22rem",
       },
       borderRadius: {
-        "2xl": "1rem",
-        "3xl": "1.5rem",
+        card: "20px",
+        control: "14px",
       },
       boxShadow: {
         soft: "0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06)",

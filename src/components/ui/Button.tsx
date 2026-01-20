@@ -17,21 +17,21 @@ export function Button({
   ...props
 }: ButtonProps) {
   const baseStyles =
-    "inline-flex items-center justify-center font-medium rounded-xl transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation";
+    "inline-flex items-center justify-center font-medium rounded-control transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation";
 
   const variantStyles = {
     primary:
-      "bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 shadow-sm hover:shadow-md",
+      "bg-accent text-white hover:bg-[#16a06a] active:bg-[#138d5c] shadow-soft hover:shadow-soft-lg",
     secondary:
-      "bg-gray-100 text-gray-900 hover:bg-gray-200 active:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700",
-    ghost: "bg-transparent text-gray-700 hover:bg-gray-100 active:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-800",
-    danger: "bg-red-600 text-white hover:bg-red-700 active:bg-red-800 shadow-sm hover:shadow-md",
+      "bg-accent-soft text-accent hover:bg-[#d4f0e5] active:bg-[#c2ead8]",
+    ghost: "bg-transparent text-text-primary hover:bg-accent-soft active:bg-[#d4f0e5]",
+    danger: "bg-red-600 text-white hover:bg-red-700 active:bg-red-800 shadow-soft hover:shadow-soft-lg",
   };
 
   const sizeStyles = {
-    sm: "px-3 py-2 text-sm min-h-[36px] sm:min-h-[40px]",
-    md: "px-4 py-3 text-base min-h-[44px] sm:min-h-[48px]", // Mobile-first: 44px minimum touch target
-    lg: "px-6 py-4 text-lg min-h-[48px] sm:min-h-[52px]",
+    sm: "px-3 py-2 text-sm min-h-[44px]", // Mobile-first: 44px minimum touch target
+    md: "px-4 py-3 text-base h-12", // 48px height as per design DNA
+    lg: "px-6 py-4 text-lg h-14",
   };
 
   return (

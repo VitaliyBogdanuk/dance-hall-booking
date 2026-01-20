@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   PageHeader,
@@ -10,9 +10,10 @@ import {
   Modal,
   Input,
   EmptyState,
-  Spinner,
   useToast,
   ToastContainer,
+  SkeletonList,
+  FAB,
 } from "@/components/ui";
 import { apiGet, apiPost, apiDelete, datetimeLocalToISO, FetchError } from "@/lib/fetcher";
 
@@ -40,7 +41,6 @@ export default function HallBlocksPage() {
   const [hall, setHall] = useState<Hall | null>(null);
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [deletingBlockId, setDeletingBlockId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -54,18 +54,14 @@ export default function HallBlocksPage() {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      setError("");
-
       const [hallData, blocksData] = await Promise.all([
         apiGet<Hall>(`/api/halls/${hallId}`),
         apiGet<Block[]>(`/api/halls/${hallId}/blocks`),
       ]);
-
       setHall(hallData);
       setBlocks(blocksData);
     } catch (err) {
       const error = err as FetchError;
-      setError(error.message || "Failed to load data");
       showToast(error.message || "Failed to load data", "error");
     } finally {
       setLoading(false);
@@ -119,23 +115,6 @@ export default function HallBlocksPage() {
     }
   };
 
-  const groupBlocksByDate = (blocks: Block[]) => {
-    const grouped: Record<string, Block[]> = {};
-    blocks.forEach((block) => {
-      const date = new Date(block.startAt).toLocaleDateString("en-US", {
-        weekday: "long",
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      });
-      if (!grouped[date]) {
-        grouped[date] = [];
-      }
-      grouped[date].push(block);
-    });
-    return grouped;
-  };
-
   const formatTime = (iso: string) => {
     return new Date(iso).toLocaleTimeString("en-US", {
       hour: "numeric",
@@ -143,94 +122,127 @@ export default function HallBlocksPage() {
     });
   };
 
-  if (loading) {
-    return (
-      <div className="max-w-7xl mx-auto">
-        <PageHeader title="Hall Blocks" description="Manage time blocks for this hall" />
-        <div className="flex items-center justify-center py-16">
-          <Spinner size="lg" />
-        </div>
-      </div>
-    );
-  }
+  const formatDate = (iso: string) => {
+    const date = new Date(iso);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dateOnly = new Date(date);
+    dateOnly.setHours(0, 0, 0, 0);
 
-  const groupedBlocks = groupBlocksByDate(blocks);
+    if (dateOnly.getTime() === today.getTime()) {
+      return "Today";
+    }
+
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    if (dateOnly.getTime() === tomorrow.getTime()) {
+      return "Tomorrow";
+    }
+
+    return date.toLocaleDateString("en-US", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+    });
+  };
+
+  const groupedBlocks = useMemo(() => {
+    const grouped: Record<string, Block[]> = {};
+    blocks.forEach((block) => {
+      const dateKey = new Date(block.startAt).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+      if (!grouped[dateKey]) {
+        grouped[dateKey] = [];
+      }
+      grouped[dateKey].push(block);
+    });
+    
+    Object.keys(grouped).forEach((date) => {
+      grouped[date].sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
+    });
+    
+    return grouped;
+  }, [blocks]);
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className="w-full space-y-4 pb-20">
       <PageHeader
-        title={hall ? `Blocks: ${hall.name}` : "Hall Blocks"}
+        title={hall ? hall.name : "Hall Blocks"}
         description="Manage time blocks when this hall is unavailable"
         action={
-          <div className="flex gap-3">
-            <Button variant="ghost" onClick={() => router.push("/admin/halls")}>
-              Back to Halls
-            </Button>
-            <Button onClick={() => setIsCreateModalOpen(true)} variant="primary">
-              Block Time
-            </Button>
-          </div>
+          <Button variant="ghost" size="sm" onClick={() => router.push("/admin/halls")}>
+            ← Back
+          </Button>
         }
       />
 
-      {error && !loading && (
-        <Card className="mb-6">
-          <CardContent>
-            <p className="text-red-600 dark:text-red-400">{error}</p>
-          </CardContent>
-        </Card>
+      {/* Loading State */}
+      {loading && <SkeletonList items={3} />}
+
+      {/* Empty State */}
+      {!loading && blocks.length === 0 && (
+        <EmptyState
+          title="No blocks yet"
+          description="Create a time block to mark when this hall is unavailable"
+          icon={
+            <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          }
+        />
       )}
 
-      {blocks.length === 0 ? (
-        <Card>
-          <CardContent padding="lg">
-            <EmptyState
-              title="No blocks yet"
-              description="Create a time block to mark when this hall is unavailable"
-              action={
-                <Button onClick={() => setIsCreateModalOpen(true)} variant="primary">
-                  Block Time
-                </Button>
-              }
-            />
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-6">
-          {Object.entries(groupedBlocks).map(([date, dateBlocks]) => (
-            <Card key={date}>
-              <CardContent>
-                <h3 className="text-headline text-gray-900 dark:text-gray-100 mb-4">{date}</h3>
-                <div className="space-y-3">
-                  {dateBlocks.map((block) => (
-                    <div
-                      key={block._id}
-                      className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-xl"
-                    >
-                      <div className="flex-1">
-                        <p className="font-medium text-gray-900 dark:text-gray-100">
-                          {formatTime(block.startAt)} - {formatTime(block.endAt)}
-                        </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{block.reason}</p>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(block._id)}
-                        isLoading={deletingBlockId === block._id}
-                      >
-                        Delete
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+      {/* Day Grouped Blocks */}
+      {!loading && blocks.length > 0 && (
+        <div className="space-y-4">
+          {Object.entries(groupedBlocks).map(([dateKey, dateBlocks]) => {
+            const dateBlocksArray = dateBlocks as Block[];
+            const firstBlock = dateBlocksArray[0];
+            const displayDate = formatDate(firstBlock.startAt);
+            
+            return (
+              <Card key={dateKey}>
+                <CardContent className="p-4">
+                  <h3 className="text-lg font-semibold text-text-primary mb-3">{displayDate}</h3>
+                  <div className="space-y-3">
+                    {dateBlocksArray.map((block: Block) => (
+                      <Card key={block._id}>
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-2xl font-bold text-text-primary mb-1">
+                                {formatTime(block.startAt)}
+                              </p>
+                              <p className="text-sm text-text-secondary mb-2">
+                                {formatTime(block.endAt)}
+                              </p>
+                              <p className="text-sm text-text-secondary">{block.reason}</p>
+                            </div>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => handleDelete(block._id)}
+                              isLoading={deletingBlockId === block._id}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              Delete
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
 
-      {/* Create Modal */}
+      {/* Create Modal (Bottom Sheet) */}
       <Modal
         isOpen={isCreateModalOpen}
         onClose={() => {
@@ -238,6 +250,7 @@ export default function HallBlocksPage() {
           setCreateForm({ startAt: "", endAt: "", reason: "" });
         }}
         title="Block Time"
+        size="md"
       >
         <div className="space-y-4">
           <Input
@@ -264,7 +277,7 @@ export default function HallBlocksPage() {
             required
             disabled={isSubmitting}
           />
-          <div className="flex gap-3 justify-end pt-4">
+          <div className="flex gap-3 pt-2">
             <Button
               variant="ghost"
               onClick={() => {
@@ -272,15 +285,28 @@ export default function HallBlocksPage() {
                 setCreateForm({ startAt: "", endAt: "", reason: "" });
               }}
               disabled={isSubmitting}
+              className="flex-1"
             >
               Cancel
             </Button>
-            <Button variant="primary" onClick={handleCreate} isLoading={isSubmitting}>
+            <Button variant="primary" onClick={handleCreate} isLoading={isSubmitting} className="flex-1">
               Create Block
             </Button>
           </div>
         </div>
       </Modal>
+
+      {/* FAB */}
+      <FAB
+        icon={
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+        }
+        label="Block time"
+        onClick={() => setIsCreateModalOpen(true)}
+        position="bottom-right"
+      />
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>

@@ -1,14 +1,17 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { AppShell, type NavItem } from "@/components/layout";
+import { AppShell, type DrawerItem } from "@/components/layout";
 
-const navItems: NavItem[] = [
+const navItems: DrawerItem[] = [
   { label: "Dashboard", href: "/admin", icon: <DashboardIcon /> },
   { label: "Halls", href: "/admin/halls", icon: <HallsIcon /> },
   { label: "Classes", href: "/admin/classes", icon: <ClassesIcon /> },
   { label: "Trainers", href: "/admin/trainers", icon: <TrainersIcon /> },
   { label: "Payments", href: "/admin/payments", icon: <PaymentsIcon /> },
+  { label: "Refunds", href: "/admin/refunds", icon: <RefundsIcon /> },
+  { label: "Notifications", href: "/admin/notifications", icon: <NotificationsIcon /> },
+  { label: "Profile", href: "/admin/profile", icon: <ProfileIcon /> },
 ];
 
 export default function AdminLayout({
@@ -20,13 +23,14 @@ export default function AdminLayout({
 
   return (
     <AppShell
+      navigationType="side-drawer"
       navItems={navItems}
       user={
         session?.user
           ? { name: session.user.name || "User", role: session.user.role }
           : undefined
       }
-      title="Admin Dashboard"
+      title="Admin"
     >
       {children}
     </AppShell>
@@ -69,6 +73,30 @@ function PaymentsIcon() {
   return (
     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" className="w-5 h-5">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+    </svg>
+  );
+}
+
+function RefundsIcon() {
+  return (
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" className="w-5 h-5">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+    </svg>
+  );
+}
+
+function NotificationsIcon() {
+  return (
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" className="w-5 h-5">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+    </svg>
+  );
+}
+
+function ProfileIcon() {
+  return (
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" className="w-5 h-5">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
     </svg>
   );
 }

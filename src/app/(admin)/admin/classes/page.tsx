@@ -6,10 +6,13 @@ import {
   Card,
   CardContent,
   EmptyState,
-  Spinner,
   useToast,
   ToastContainer,
+  SkeletonList,
+  Badge,
+  CollapsibleCard,
   Select,
+  Button,
 } from "@/components/ui";
 import { apiGet, FetchError } from "@/lib/fetcher";
 
@@ -56,7 +59,6 @@ export default function AdminClassesPage() {
   const [halls, setHalls] = useState<Hall[]>([]);
   const [trainers, setTrainers] = useState<Trainer[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [filters, setFilters] = useState({
     status: "" as "" | "SCHEDULED" | "CANCELED",
     hallId: "",
@@ -66,19 +68,14 @@ export default function AdminClassesPage() {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      setError("");
-
-      // Load halls and trainers for filters
       const [hallsData, trainersData] = await Promise.all([
         apiGet<Hall[]>("/api/halls").catch(() => []),
         apiGet<Trainer[]>("/api/admin/trainers").catch(() => []),
       ]);
-
       setHalls(hallsData);
       setTrainers(trainersData);
     } catch (err) {
       const error = err as FetchError;
-      setError(error.message || "Failed to load data");
       showToast(error.message || "Failed to load data", "error");
     } finally {
       setLoading(false);
@@ -88,8 +85,6 @@ export default function AdminClassesPage() {
   const loadClasses = useCallback(async () => {
     try {
       setLoading(true);
-      setError("");
-
       const params = new URLSearchParams();
       if (filters.status) {
         params.append("status", filters.status);
@@ -105,7 +100,6 @@ export default function AdminClassesPage() {
       setClasses(Array.isArray(data) ? data : []);
     } catch (err) {
       const error = err as FetchError;
-      setError(error.message || "Failed to load classes");
       showToast(error.message || "Failed to load classes", "error");
       setClasses([]);
     } finally {
@@ -125,6 +119,30 @@ export default function AdminClassesPage() {
     return new Date(iso).toLocaleTimeString("en-US", {
       hour: "numeric",
       minute: "2-digit",
+    });
+  };
+
+  const formatDate = (iso: string) => {
+    const date = new Date(iso);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dateOnly = new Date(date);
+    dateOnly.setHours(0, 0, 0, 0);
+
+    if (dateOnly.getTime() === today.getTime()) {
+      return "Today";
+    }
+
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    if (dateOnly.getTime() === tomorrow.getTime()) {
+      return "Tomorrow";
+    }
+
+    return date.toLocaleDateString("en-US", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
     });
   };
 
@@ -148,156 +166,144 @@ export default function AdminClassesPage() {
   const groupedClasses = useMemo(() => {
     const grouped: Record<string, ClassSession[]> = {};
     classes.forEach((cls) => {
-      const date = new Date(cls.startAt).toLocaleDateString("en-US", {
-        weekday: "long",
+      const dateKey = new Date(cls.startAt).toLocaleDateString("en-US", {
         year: "numeric",
         month: "long",
         day: "numeric",
       });
-      if (!grouped[date]) {
-        grouped[date] = [];
+      if (!grouped[dateKey]) {
+        grouped[dateKey] = [];
       }
-      grouped[date].push(cls);
+      grouped[dateKey].push(cls);
     });
+    
+    Object.keys(grouped).forEach((date) => {
+      grouped[date].sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
+    });
+    
     return grouped;
   }, [classes]);
 
-  if (loading && classes.length === 0) {
-    return (
-      <div className="w-full">
-        <PageHeader title="Classes" description="Manage all class sessions" />
-        <div className="flex items-center justify-center py-12 sm:py-16">
-          <Spinner size="lg" />
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="w-full">
-      <PageHeader
-        title="Classes"
-        description="View and manage all class sessions"
-      />
+    <div className="w-full space-y-4">
+      <PageHeader title="Classes" description="View and manage all class sessions" />
 
-      {/* Filters */}
-      <Card className="mb-4 sm:mb-6">
-        <CardContent className="p-4 sm:p-6">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Select
-              label="Status"
-              value={filters.status}
-              onChange={(e) => setFilters({ ...filters, status: e.target.value as typeof filters.status })}
-              options={[
-                { value: "", label: "All Statuses" },
-                { value: "SCHEDULED", label: "Scheduled" },
-                { value: "CANCELED", label: "Canceled" },
-              ]}
-            />
+      {/* Filters (Collapsible) */}
+      <CollapsibleCard title="Filters">
+        <div className="space-y-4">
+          <Select
+            label="Status"
+            value={filters.status}
+            onChange={(e) => setFilters({ ...filters, status: e.target.value as typeof filters.status })}
+            options={[
+              { value: "", label: "All Statuses" },
+              { value: "SCHEDULED", label: "Scheduled" },
+              { value: "CANCELED", label: "Canceled" },
+            ]}
+          />
+          <Select
+            label="Hall"
+            value={filters.hallId}
+            onChange={(e) => setFilters({ ...filters, hallId: e.target.value })}
+            options={[
+              { value: "", label: "All Halls" },
+              ...halls.map((hall) => ({ value: hall._id, label: hall.name })),
+            ]}
+          />
+          <Select
+            label="Trainer"
+            value={filters.trainerId}
+            onChange={(e) => setFilters({ ...filters, trainerId: e.target.value })}
+            options={[
+              { value: "", label: "All Trainers" },
+              ...trainers.map((trainer) => ({ value: trainer._id, label: trainer.userId.name })),
+            ]}
+          />
+          {(filters.status || filters.hallId || filters.trainerId) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setFilters({ status: "", hallId: "", trainerId: "" })}
+              className="w-full"
+            >
+              Clear Filters
+            </Button>
+          )}
+        </div>
+      </CollapsibleCard>
 
-            <Select
-              label="Hall"
-              value={filters.hallId}
-              onChange={(e) => setFilters({ ...filters, hallId: e.target.value })}
-              options={[
-                { value: "", label: "All Halls" },
-                ...halls.map((hall) => ({ value: hall._id, label: hall.name })),
-              ]}
-            />
+      {/* Loading State */}
+      {loading && <SkeletonList items={3} />}
 
-            <Select
-              label="Trainer"
-              value={filters.trainerId}
-              onChange={(e) => setFilters({ ...filters, trainerId: e.target.value })}
-              options={[
-                { value: "", label: "All Trainers" },
-                ...trainers.map((trainer) => ({ value: trainer._id, label: trainer.userId.name })),
-              ]}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {error && !loading && (
-        <Card className="mb-4 sm:mb-6 border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20">
-          <CardContent className="p-4 sm:p-6">
-            <p className="text-sm sm:text-base text-red-800 dark:text-red-300">{error}</p>
-          </CardContent>
-        </Card>
+      {/* Empty State */}
+      {!loading && classes.length === 0 && (
+        <EmptyState
+          title="No classes found"
+          description="No classes match your current filters"
+          icon={
+            <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          }
+        />
       )}
 
-      {classes.length === 0 ? (
-        <Card>
-          <CardContent className="p-8 sm:p-12">
-            <EmptyState
-              title="No classes found"
-              description="No classes match your current filters"
-            />
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-4 sm:space-y-6">
-          {Object.entries(groupedClasses).map(([date, dateClasses]) => (
-            <Card key={date}>
-              <CardContent className="p-4 sm:p-6">
-                <h3 className="text-lg sm:text-headline text-gray-900 dark:text-gray-100 mb-4">
-                  {date}
-                </h3>
+      {/* Day Grouped Classes */}
+      {!loading && classes.length > 0 && (
+        <div className="space-y-6">
+          {Object.entries(groupedClasses).map(([dateKey, dateClasses]) => {
+            const firstClass = dateClasses[0];
+            const displayDate = formatDate(firstClass.startAt);
+            
+            return (
+              <div key={dateKey} className="space-y-3">
+                <h3 className="text-lg font-semibold text-text-primary mb-3 px-1">{displayDate}</h3>
                 <div className="space-y-3">
                   {dateClasses.map((classSession) => {
                     const isCanceled = classSession.status === "CANCELED";
-                    const seatsAvailable = classSession.capacity - classSession.takenSeats;
+
                     return (
-                      <div
-                        key={classSession._id}
-                        className={`p-4 rounded-xl border ${
-                          isCanceled
-                            ? "bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700"
-                            : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800"
-                        }`}
-                      >
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 mb-2">
-                              <p className="font-medium text-base sm:text-lg text-gray-900 dark:text-gray-100">
-                                {formatTime(classSession.startAt)} - {formatTime(classSession.endAt)}
+                      <Card key={classSession._id} className={isCanceled ? "opacity-60" : "hover:shadow-soft-lg transition-shadow"}>
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-2">
+                                <p className="text-2xl font-bold text-text-primary">
+                                  {formatTime(classSession.startAt)}
+                                </p>
+                                <Badge variant={isCanceled ? "error" : "success"} size="sm">
+                                  {isCanceled ? "Canceled" : "Scheduled"}
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-text-secondary mb-3">
+                                {formatTime(classSession.endAt)} • {getHallName(classSession.hallId)}
                               </p>
-                              <span
-                                className={`px-2 py-1 rounded-lg text-xs font-medium whitespace-nowrap ${
-                                  isCanceled
-                                    ? "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
-                                    : "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300"
-                                }`}
-                              >
-                                {isCanceled ? "Canceled" : "Scheduled"}
-                              </span>
-                            </div>
-                            <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
-                              <p>Hall: {getHallName(classSession.hallId)}</p>
-                              <p>Trainer: {getTrainerName(classSession)}</p>
-                              <div className="flex flex-wrap gap-3 sm:gap-4">
-                                <span>
-                                  {classSession.takenSeats} / {classSession.capacity} booked
-                                </span>
-                                <span className={seatsAvailable === 0 ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"}>
-                                  {seatsAvailable} {seatsAvailable === 1 ? "seat" : "seats"} available
-                                </span>
+                              <div className="space-y-1 text-sm text-text-secondary">
+                                <p>
+                                  <span className="font-medium text-text-primary">Trainer:</span> {getTrainerName(classSession)}
+                                </p>
+                                <p>
+                                  <span className="font-medium text-text-primary">
+                                    {classSession.takenSeats} / {classSession.capacity}
+                                  </span>{" "}
+                                  seats booked
+                                </p>
                                 {classSession.price && (
-                                  <span className="font-medium text-gray-900 dark:text-gray-100">
-                                    ${classSession.price}
-                                  </span>
+                                  <p>
+                                    <span className="font-medium text-text-primary">Price:</span> ${classSession.price}
+                                  </p>
                                 )}
                               </div>
                             </div>
                           </div>
-                        </div>
-                      </div>
+                        </CardContent>
+                      </Card>
                     );
                   })}
                 </div>
-              </CardContent>
-            </Card>
-          ))}
+              </div>
+            );
+          })}
         </div>
       )}
 
